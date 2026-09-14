@@ -6,15 +6,15 @@
   <img src="src/assets/presenter-icon.png" alt="Presenter" width="70" />
 </p>
 
-Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** + **React** + **TypeScript**. Transforma um arquivo PDF em uma apresentação estilo PowerPoint, com uma janela de controle para o apresentador e uma janela de projeção em tela cheia para o público.
+Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** + **React** + **TypeScript**. Transforma um arquivo PDF em uma apresentação estilo PowerPoint, com uma janela de controle para o apresentador e janelas de projeção em tela cheia para o público.
 
 ## Recursos
 
 - **Abertura de PDF** — selecione qualquer arquivo `.pdf` do computador.
 - **Renderização em alta resolução** — cada página é desenhada em `<canvas>` via PDF.js (react-pdf), redimensionando-se automaticamente ao tamanho da janela.
-- **Modo apresentador multi-janela** — a janela principal controla uma segunda janela (`viewscreen`) exibida em tela cheia no projetor.
+- **Modo apresentador multi-janela** — a janela principal controla janelas `viewscreen-{idx}` exibidas em tela cheia nos monitores selecionados.
 - **Modo tela cheia com monitor único** — quando há apenas um monitor, a janela principal entra em tela cheia com controles flutuantes.
-- **Seleção de monitor** — identifique os monitores disponíveis e escolha em qual tela a apresentação será exibida (configuração persistida em disco).
+- **Seleção multi-monitor** — marque múltiplos monitores para exibir a apresentação simultaneamente em várias telas (configuração persistida em disco).
 - **Pré-carregamento** — as páginas anterior e posterior à atual são carregadas em segundo plano para transições instantâneas.
 - **Preview do próximo slide** — miniatura da próxima página na sidebar direita, com tamanho redimensionável via arraste do mouse.
 - **Carrossel de slides** — filmstrip na parte inferior com miniaturas de todas as páginas e anotações; clique para pular para qualquer slide; altura ajustável via arraste.
@@ -41,7 +41,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `Home` | Primeiro slide |
 | `End` | Último slide |
 | `B` | Alternar tela preta |
-| `Esc` | Encerrar apresentação (com confirmação) |
+| `Esc` | Encerrar apresentação ou voltar ao início (com confirmação) |
 | `L` | Ativar/desativar laser |
 | `P` | Ativar/desativar caneta |
 | `H` | Ativar/desativar marcador de texto |
@@ -66,28 +66,44 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 ## Arquitetura
 
 - `src/` — frontend React/TypeScript
-  - `src/state/presentation.tsx` — estado global (Context), navegação de slides, seleção de monitor, zoom
-  - `src/state/annotations.ts` — hooks de anotações (apresentador + viewscreen), undo/redo
+  - `src/state/presentation.tsx` — estado global (Context), navegação de slides, seleção multi-monitor, zoom
+  - `src/state/annotations/` — estado de anotações (provider + contexto compartilhado)
+    - `presenter.tsx` — hook principal do apresentador (strokes, undo/redo, emit de eventos)
+    - `viewscreen.ts` — hook read-only da janela de projeção (escuta eventos)
+    - `index.ts` — barrel re-export
   - `src/components/` — UI
-    - `Sidebar.tsx` — painel de controle (abrir PDF, monitor, ferramentas, cronômetro)
+    - `Sidebar.tsx` — orquestrador da sidebar (decompõe nos sub-componentes abaixo)
+    - `sidebar/FileControls.tsx` — abertura de PDF, nome do documento, voltar ao início
+    - `sidebar/MonitorSelector.tsx` — seleção multi-monitor com checkboxes
+    - `sidebar/PresentationControls.tsx` — iniciar/encerrar apresentação, tela preta
+    - `sidebar/SlideNavigation.tsx` — navegação prev/next e input de página
+    - `sidebar/AnnotationToolbar.tsx` — botões de ferramentas com tamanhos + undo/redo/reset
     - `PdfStage.tsx` — renderizador de página com zoom (CSS transform) e pan (Space+drag)
     - `AnnotationLayer.tsx` — canvas de anotações (caneta, marcador, laser, borracha)
+    - `AnnotationLayerContainer.tsx` — wrapper que conecta AnnotationLayer ao contexto
+    - `FloatingControls.tsx` — controles flutuantes no modo tela cheia (navegação + ferramentas)
+    - `PreviewPanel.tsx` — sidebar direita com preview do próximo slide + exportação + configurações
     - `SlideCarousel.tsx` — filmstrip de miniaturas com anotações e altura ajustável
     - `NextPreview.tsx` — preview do próximo slide
     - `Timer.tsx` — cronômetro progressivo/regressivo
     - `Welcome.tsx` — tela inicial vazia
   - `src/viewscreen/` — janela de projeção (instância secundária)
+  - `src/hooks/` — hooks customizados
+    - `useKeyboardShortcuts.ts` — atalhos de teclado globais
+    - `useAutoHide.ts` — auto-hide para controles flutuantes
   - `src/lib/` — helpers
     - `pdf.ts` — leitura de PDF e comandos Rust (read_pdf, set_document, get_document)
-    - `monitors.ts` — detecção de monitores e controle da janela de projeção
-    - `annotations.ts` — tipos, constantes e utilidades de anotações (incluindo_EVENT_ANNOTATION_STATE_SYNC_ e _EVENT_ANNOTATION_CLEAR_PAGE_)
+    - `monitors.ts` — detecção de monitores, config persistida e comandos de projeção
+    - `annotations.ts` — tipos, constantes e utilidades de anotações (distâncias, eraser logic)
+    - `canvasDrawing.ts` — funções de desenho compartilhadas (drawStrokes, drawLaser, drawEraserCursor, drawToolCursor)
+    - `exportPdf.ts` — exportação de PDF com anotações incorporadas
     - `shared.ts` — constantes de eventos e interfaces compartilhadas
 - `src-tauri/` — backend Rust
-  - `src/lib.rs` — comandos (`read_pdf`, `set_document`, `get_document`, `list_monitors`, `open_projection`, `close_projection`, `save_file`, etc.) e ícone embutido
+  - `src/lib.rs` — comandos (`read_pdf`, `set_document`, `get_document`, `list_monitors`, `open_projections`, `close_projection`, `save_file`, etc.) e ícone embutido
   - `capabilities/default.json` — permissões das janelas
   - `tauri.conf.json` — configuração do app e janelas
 
-A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (troca de página), `tela-preta` (blackout), `anotacao-sincronizar` (undo/redo), `anotacao-limpar-pagina` (borracha duplo-clique) e eventos de anotações (`anotacao-traco`, `anotacao-laser`, `anotacao-apagar`, `anotacao-limpar`). A janela de projeção é criada/posicionada/fechada por comandos Rust (`open_projection` / `close_projection`), que a movem para o monitor escolhido e ativam o modo tela cheia.
+A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (troca de página), `tela-preta` (blackout), `anotacao-sincronizar` (undo/redo), `anotacao-limpar-pagina` (borracha duplo-clique) e eventos de anotações (`anotacao-traco`, `anotacao-laser`, `anotacao-apagar`, `anotacao-limpar`). As janelas de projeção são criadas/posicionadas/fechadas por comandos Rust (`open_projections` / `close_projection`), que as movem para os monitores escolhidos e ativam o modo tela cheia.
 
 ## Como executar
 
@@ -124,8 +140,8 @@ A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (
 ### Uso
 
 1. Clique em **Abrir PDF** e selecione o arquivo da apresentação.
-2. (Opcional) Na seção **Tela de projeção**, escolha em qual monitor exibir a apresentação.
-3. Clique em **Iniciar (F5)** — a janela de projeção abre em tela cheia no monitor escolhido.
+2. (Opcional) Na seção **Tela de projeção**, marque os monitores onde a apresentação será exibida.
+3. Clique em **Iniciar (F5)** — as janelas de projeção abrem em tela cheia nos monitores selecionados.
 4. Navegue com as setas, `Espaço` ou pelos controles da sidebar.
 5. Use as ferramentas de anotação (caneta, marcador, laser, borracha) na barra inferior da sidebar.
 6. Use `B` para tela preta e `F5`/`Esc` para encerrar.
