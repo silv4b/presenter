@@ -29,6 +29,7 @@ interface AnnotationLayerProps {
   penSize?: number;
   highlighterSize?: number;
   onResize?: (deltaY: number) => void;
+  annotationCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
 
 function drawScene(
@@ -135,6 +136,7 @@ export function AnnotationLayer({
   penSize = 2.5,
   highlighterSize = 18,
   onResize,
+  annotationCanvasRef,
 }: AnnotationLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -242,7 +244,12 @@ export function AnnotationLayer({
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={(node) => {
+        (canvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = node;
+        if (annotationCanvasRef) {
+          (annotationCanvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = node;
+        }
+      }}
       className={cn(
         "absolute inset-0 h-full w-full",
         isActive ? "pointer-events-auto touch-none" : "pointer-events-none",

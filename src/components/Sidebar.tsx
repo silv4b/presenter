@@ -34,6 +34,8 @@ import {
   RefreshCw,
   RotateCcw,
   Square,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { Timer } from "@/components/Timer";
 import { cn } from "@/lib/utils";
@@ -54,9 +56,13 @@ interface SidebarProps {
   highlighterSize: number;
   eraserRadius: number;
   resetToolSizes: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes }: SidebarProps) {
+export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes, undo, redo, canUndo, canRedo }: SidebarProps) {
   const [refreshing, setRefreshing] = useState(false);
   const {
     docName,
@@ -365,6 +371,46 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">Restaurar padrão</TooltipContent>
+            </Tooltip>
+            <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
+              &nbsp;
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  aria-label="Desfazer"
+                >
+                  <Undo2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Desfazer (Ctrl+Z)</TooltipContent>
+            </Tooltip>
+            <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
+              &nbsp;
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  aria-label="Refazer"
+                >
+                  <Redo2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Refazer (Ctrl+Shift+Z)</TooltipContent>
             </Tooltip>
             <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
               &nbsp;

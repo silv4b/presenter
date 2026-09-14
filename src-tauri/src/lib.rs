@@ -182,6 +182,14 @@ fn close_projection(app: AppHandle) {
     }
 }
 
+#[tauri::command]
+fn save_file(path: String, data: String) -> Result<(), String> {
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&data)
+        .map_err(|e| e.to_string())?;
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -206,8 +214,22 @@ pub fn run() {
             get_monitor_config,
             set_monitor_config,
             open_projection,
-            close_projection
+            close_projection,
+            save_file
         ])
+        .setup(|app| {
+            let icon_bytes = include_bytes!("../../src/assets/presenter-icon.png");
+            let decoder = png::Decoder::new(std::io::Cursor::new(icon_bytes));
+            let mut reader = decoder.read_info().expect("failed to decode icon PNG");
+            let mut buf = vec![0u8; reader.output_buffer_size()];
+            let info = reader.next_frame(&mut buf).expect("failed to read icon frame");
+            buf.truncate(info.buffer_size());
+            let icon = tauri::image::Image::new_owned(buf, info.width, info.height);
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_icon(icon);
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

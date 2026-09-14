@@ -24,7 +24,7 @@ import {
   EVENT_BLACK_SCREEN,
   type SlideChangePayload,
 } from "@/lib/shared";
-import type { AnnotationTool } from "@/lib/annotations";
+import { EVENT_ANNOTATION_CLEAR, type AnnotationTool } from "@/lib/annotations";
 
 interface PresentationContextValue {
   docPath: string | null;
@@ -145,6 +145,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setNumPages(0);
     setCurrentPage(1);
     setError(null);
+    emit(EVENT_ANNOTATION_CLEAR).catch(() => {});
   }, [isPresenting, monitors.length]);
 
   const goToPage = useCallback(

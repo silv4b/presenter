@@ -12,6 +12,8 @@ import {
   EVENT_ANNOTATION_LASER,
   EVENT_ANNOTATION_ERASE,
   EVENT_ANNOTATION_CLEAR,
+  EVENT_ANNOTATION_CLEAR_PAGE,
+  EVENT_ANNOTATION_STATE_SYNC,
   HIGHLIGHTER_COLOR,
   HIGHLIGHTER_SIZE,
   HIGHLIGHTER_MIN,
@@ -33,8 +35,11 @@ function nextStrokeId() {
   return `stroke-${Date.now()}-${strokeSeq}`;
 }
 
+const MAX_HISTORY = 50;
+
 export interface PresenterAnnotations {
   strokes: AnnotationStroke[];
+  strokesByPage: Record<number, AnnotationStroke[]>;
   laser: Point | null;
   onStrokeStart: (tool: "pen" | "highlighter", point: Point) => void;
   onStrokePoint: (point: Point) => void;
@@ -44,11 +49,16 @@ export interface PresenterAnnotations {
   onErasePoint: (point: Point) => void;
   onEraseEnd: () => void;
   clearAnnotations: () => void;
+  clearPage: (page: number) => void;
   penSize: number;
   highlighterSize: number;
   eraserRadius: number;
   adjustSize: (deltaY: number) => void;
   resetToolSizes: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export function usePresenterAnnotations(): PresenterAnnotations {
@@ -82,6 +92,23 @@ export function usePresenterAnnotations(): PresenterAnnotations {
 
   const activeStrokeRef = useRef<AnnotationStroke | null>(null);
   const activePointsRef = useRef<Point[]>([]);
+
+  const strokesByPageRef = useRef<Record<number, AnnotationStroke[]>>({});
+  const historyRef = useRef<Record<number, AnnotationStroke[]>[]>([{}]);
+  const historyIndexRef = useRef(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const pushHistory = useCallback((state: Record<number, AnnotationStroke[]>) => {
+    const idx = historyIndexRef.current;
+    const history = historyRef.current.slice(0, idx + 1);
+    history.push(structuredClone(state));
+    if (history.length > MAX_HISTORY) history.shift();
+    historyRef.current = history;
+    historyIndexRef.current = history.length - 1;
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(false);
+  }, []);
 
   const pendingRef = useRef<{
     stroke?: AnnotationStroke;
@@ -118,6 +145,10 @@ export function usePresenterAnnotations(): PresenterAnnotations {
     },
     [flush],
   );
+
+  useEffect(() => {
+    strokesByPageRef.current = strokesByPage;
+  }, [strokesByPage]);
 
   const onStrokeStart = useCallback(
     (tool: "pen" | "highlighter", point: Point) => {
@@ -162,10 +193,14 @@ export function usePresenterAnnotations(): PresenterAnnotations {
   );
 
   const onStrokeEnd = useCallback(() => {
+    const snapshot = activeStrokeRef.current;
     activeStrokeRef.current = null;
     activePointsRef.current = [];
     flushNow();
-  }, [flushNow]);
+    if (snapshot) {
+      pushHistory(strokesByPageRef.current);
+    }
+  }, [flushNow, pushHistory]);
 
   const onLaser = useCallback(
     (point: Point | null) => {
@@ -217,13 +252,50 @@ export function usePresenterAnnotations(): PresenterAnnotations {
         radius: eraseGestureRadiusRef.current,
       };
       emit(EVENT_ANNOTATION_ERASE, payload).catch(() => {});
+      pushHistory(strokesByPageRef.current);
     }
-  }, []);
+  }, [pushHistory]);
 
   const clearAnnotations = useCallback(() => {
+    pushHistory(strokesByPageRef.current);
     setStrokesByPage({});
     schedule({ clear: true });
-  }, [schedule]);
+  }, [schedule, pushHistory]);
+
+  const clearPage = useCallback(
+    (page: number) => {
+      const current = strokesByPageRef.current;
+      if (!current[page] || current[page].length === 0) return;
+      pushHistory(current);
+      setStrokesByPage((prev) => {
+        const next = { ...prev };
+        delete next[page];
+        return next;
+      });
+      emit(EVENT_ANNOTATION_CLEAR_PAGE, { page }).catch(() => {});
+    },
+    [pushHistory],
+  );
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current -= 1;
+    const state = historyRef.current[historyIndexRef.current];
+    setStrokesByPage(state);
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(true);
+    emit(EVENT_ANNOTATION_STATE_SYNC, state).catch(() => {});
+  }, []);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current += 1;
+    const state = historyRef.current[historyIndexRef.current];
+    setStrokesByPage(state);
+    setCanUndo(true);
+    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+    emit(EVENT_ANNOTATION_STATE_SYNC, state).catch(() => {});
+  }, []);
 
   const adjustSize = useCallback(
     (deltaY: number) => {
@@ -255,17 +327,34 @@ export function usePresenterAnnotations(): PresenterAnnotations {
 
   useEffect(() => {
     let disposed = false;
-    let unlisten: UnlistenFn | null = null;
-    listen(EVENT_ANNOTATION_CLEAR, () => {
-      setStrokesByPage({});
-      setLaser(null);
-    }).then((u) => {
-      if (disposed) u();
-      else unlisten = u;
-    });
+    const unlisteners: UnlistenFn[] = [];
+
+    const add = (p: Promise<UnlistenFn>) =>
+      p.then((u) => {
+        if (disposed) u();
+        else unlisteners.push(u);
+      });
+
+    add(
+      listen(EVENT_ANNOTATION_CLEAR, () => {
+        setStrokesByPage({});
+        setLaser(null);
+      }),
+    );
+
+    add(
+      listen<{ page: number }>(EVENT_ANNOTATION_CLEAR_PAGE, (e) => {
+        setStrokesByPage((prev) => {
+          const next = { ...prev };
+          delete next[e.payload.page];
+          return next;
+        });
+      }),
+    );
+
     return () => {
       disposed = true;
-      if (unlisten) unlisten();
+      unlisteners.forEach((u) => u());
     };
   }, []);
 
@@ -285,6 +374,7 @@ export function usePresenterAnnotations(): PresenterAnnotations {
 
   return {
     strokes,
+    strokesByPage,
     laser,
     onStrokeStart,
     onStrokePoint,
@@ -294,11 +384,16 @@ export function usePresenterAnnotations(): PresenterAnnotations {
     onErasePoint,
     onEraseEnd,
     clearAnnotations,
+    clearPage,
     penSize,
     highlighterSize,
     eraserRadius,
     adjustSize,
     resetToolSizes,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 }
 
@@ -351,6 +446,22 @@ export function useViewscreenAnnotations(): ViewscreenAnnotations {
       listen(EVENT_ANNOTATION_CLEAR, () => {
         setStrokesByPage({});
         setLaser(null);
+      }),
+    );
+
+    add(
+      listen<{ page: number }>(EVENT_ANNOTATION_CLEAR_PAGE, (e) => {
+        setStrokesByPage((prev) => {
+          const next = { ...prev };
+          delete next[e.payload.page];
+          return next;
+        });
+      }),
+    );
+
+    add(
+      listen<Record<number, AnnotationStroke[]>>(EVENT_ANNOTATION_STATE_SYNC, (e) => {
+        setStrokesByPage(e.payload);
       }),
     );
 

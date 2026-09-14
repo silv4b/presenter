@@ -24,6 +24,8 @@ export const EVENT_ANNOTATION_STROKE = "anotacao-traco";
 export const EVENT_ANNOTATION_LASER = "anotacao-laser";
 export const EVENT_ANNOTATION_ERASE = "anotacao-apagar";
 export const EVENT_ANNOTATION_CLEAR = "anotacao-limpar";
+export const EVENT_ANNOTATION_CLEAR_PAGE = "anotacao-limpar-pagina";
+export const EVENT_ANNOTATION_STATE_SYNC = "anotacao-sincronizar";
 
 export const PEN_COLOR = "#ef4444";
 export const PEN_SIZE = 2.5;
