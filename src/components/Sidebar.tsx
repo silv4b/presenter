@@ -289,7 +289,7 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
                   <MousePointer2 className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Laser</TooltipContent>
+              <TooltipContent side="top">Laser (L)</TooltipContent>
             </Tooltip>
             <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
               &nbsp;
@@ -308,7 +308,7 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
                   <Pen className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Caneta</TooltipContent>
+              <TooltipContent side="top">Caneta (P)</TooltipContent>
             </Tooltip>
             <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
               {formatSize(penSize)}
@@ -327,7 +327,7 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
                   <Highlighter className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Marcador de texto</TooltipContent>
+              <TooltipContent side="top">Marcador (H)</TooltipContent>
             </Tooltip>
             <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
               {formatSize(highlighterSize)}
@@ -346,7 +346,7 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
                   <Eraser className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Borracha</TooltipContent>
+              <TooltipContent side="top">Borracha (E)</TooltipContent>
             </Tooltip>
             <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">
               {formatSize(eraserRadius)}

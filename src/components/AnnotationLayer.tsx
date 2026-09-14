@@ -150,6 +150,11 @@ export function AnnotationLayer({
   const isActive = interactive && activeTool !== null;
 
   useEffect(() => {
+    if (activeTool !== "eraser") setEraserPos(null);
+    if (activeTool !== "pen" && activeTool !== "highlighter") setToolCursor(null);
+  }, [activeTool]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;

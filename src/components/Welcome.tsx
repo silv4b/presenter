@@ -8,6 +8,9 @@ const shortcuts: [string, string][] = [
   ["←", "Slide anterior"],
   ["B", "Tela preta"],
   ["Home / End", "Primeiro / último slide"],
+  ["L / P / H / E", "Laser / Caneta / Marcador / Borracha"],
+  ["Ctrl+Z / Ctrl+Shift+Z", "Desfazer / Refazer"],
+  ["Ctrl+= / Ctrl− / Ctrl0", "Zoom in / out / resetar"],
 ];
 
 export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {

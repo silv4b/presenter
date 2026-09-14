@@ -260,6 +260,9 @@ function PresenterShell() {
       const dialogOpen = confirmExitOpenRef.current || closePendingRef.current || settingsOpenRef.current;
       if (dialogOpen) return;
 
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isInput = tag === "INPUT" || tag === "TEXTAREA";
+
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         annotations.undo();
@@ -334,6 +337,22 @@ function PresenterShell() {
         case "B":
           if (isPresenting) toggleBlackScreen();
           break;
+        case "l":
+        case "L":
+          if (!isInput) { e.preventDefault(); toggleTool("laser"); }
+          break;
+        case "p":
+        case "P":
+          if (!isInput) { e.preventDefault(); toggleTool("pen"); }
+          break;
+        case "h":
+        case "H":
+          if (!isInput) { e.preventDefault(); toggleTool("highlighter"); }
+          break;
+        case "e":
+        case "E":
+          if (!isInput) { e.preventDefault(); toggleTool("eraser"); }
+          break;
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -347,6 +366,7 @@ function PresenterShell() {
     startPresentation,
     stopPresentation,
     toggleBlackScreen,
+    toggleTool,
     annotations.undo,
     annotations.redo,
     handleZoom,
@@ -501,10 +521,10 @@ function PresenterShell() {
             )}
           >
             {([
-              ["laser", MousePointer2, "Laser"],
-              ["pen", Pen, "Caneta"],
-              ["highlighter", Highlighter, "Marcador"],
-              ["eraser", Eraser, "Borracha"],
+              ["laser", MousePointer2, "Laser (L)"],
+              ["pen", Pen, "Caneta (P)"],
+              ["highlighter", Highlighter, "Marcador (H)"],
+              ["eraser", Eraser, "Borracha (E)"],
             ] as const).map(([tool, Icon, label]) => (
               <Button
                 key={tool}
