@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, Monitor, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
-const VIEWSCREEN_LABEL: &str = "viewscreen";
+const VIEWSCREEN_PREFIX: &str = "viewscreen";
 
 #[derive(Default)]
 struct DocState(Mutex<Option<DocInfo>>);
@@ -28,7 +28,7 @@ struct MonitorInfo {
 }
 
 #[derive(Default)]
-struct MonitorState(Mutex<Option<String>>);
+struct MonitorState(Mutex<Option<Vec<String>>>);
 
 #[tauri::command]
 fn read_pdf(path: String) -> Result<String, String> {
@@ -83,7 +83,7 @@ fn list_monitors(app: AppHandle) -> Vec<MonitorInfo> {
 }
 
 #[tauri::command]
-fn get_monitor_config(state: tauri::State<MonitorState>, app: AppHandle) -> Option<String> {
+fn get_monitor_config(state: tauri::State<MonitorState>, app: AppHandle) -> Option<Vec<String>> {
     let mut guard = state.0.lock().unwrap();
     if guard.is_none() {
         *guard = read_monitor_config(&app);
@@ -92,9 +92,9 @@ fn get_monitor_config(state: tauri::State<MonitorState>, app: AppHandle) -> Opti
 }
 
 #[tauri::command]
-fn set_monitor_config(state: tauri::State<MonitorState>, app: AppHandle, id: String) {
-    *state.0.lock().unwrap() = Some(id.clone());
-    write_monitor_config(&app, &id);
+fn set_monitor_config(state: tauri::State<MonitorState>, app: AppHandle, ids: Vec<String>) {
+    *state.0.lock().unwrap() = Some(ids.clone());
+    write_monitor_config(&app, &ids);
 }
 
 fn config_path(app: &AppHandle) -> Option<std::path::PathBuf> {
@@ -103,21 +103,28 @@ fn config_path(app: &AppHandle) -> Option<std::path::PathBuf> {
     Some(dir.join("config.json"))
 }
 
-fn read_monitor_config(app: &AppHandle) -> Option<String> {
+fn read_monitor_config(app: &AppHandle) -> Option<Vec<String>> {
     #[derive(Deserialize)]
     struct Config {
-        monitor: Option<String>,
+        monitors: Option<Vec<String>>,
     }
     let path = config_path(app)?;
     let data = std::fs::read_to_string(path).ok()?;
-    serde_json::from_str::<Config>(&data)
-        .ok()
-        .and_then(|c| c.monitor)
+    let config: Config = serde_json::from_str(&data).ok()?;
+    config.monitors.or_else(|| {
+        // migration: single "monitor" key → array
+        #[derive(Deserialize)]
+        struct LegacyConfig {
+            monitor: Option<String>,
+        }
+        let legacy: LegacyConfig = serde_json::from_str(&data).ok()?;
+        legacy.monitor.map(|m| vec![m])
+    })
 }
 
-fn write_monitor_config(app: &AppHandle, id: &str) {
+fn write_monitor_config(app: &AppHandle, ids: &[String]) {
     if let Some(path) = config_path(app) {
-        let config = serde_json::json!({ "monitor": id });
+        let config = serde_json::json!({ "monitors": ids });
         if let Ok(s) = serde_json::to_string(&config) {
             let _ = std::fs::write(path, s);
         }
@@ -131,42 +138,44 @@ fn monitor_key(m: &Monitor) -> String {
         .unwrap_or_else(|| format!("monitor:{}x{}", pos.x, pos.y))
 }
 
+fn viewscreen_label(idx: usize) -> String {
+    format!("{}-{}", VIEWSCREEN_PREFIX, idx)
+}
+
 #[tauri::command]
-async fn open_projection(app: AppHandle, monitor_id: Option<String>) -> Result<(), String> {
-    let window = if let Some(w) = app.get_webview_window(VIEWSCREEN_LABEL) {
-        w
-    } else {
-        WebviewWindowBuilder::new(&app, VIEWSCREEN_LABEL, WebviewUrl::App("index.html".into()))
+async fn open_projections(app: AppHandle, monitor_ids: Vec<String>) -> Result<(), String> {
+    // close existing viewscreen windows first
+    close_all_viewscreens(&app);
+
+    let monitors = app.available_monitors().map_err(|e| e.to_string())?;
+
+    for (idx, target_id) in monitor_ids.iter().enumerate() {
+        let label = viewscreen_label(idx);
+
+        let window = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
             .title("Presenter — Projeção")
             .decorations(false)
             .resizable(false)
             .visible(false)
             .build()
-            .map_err(|e| e.to_string())?
-    };
-
-    let target = if let Some(target_id) = monitor_id {
-        app.available_monitors()
-            .map_err(|e| e.to_string())?
-            .into_iter()
-            .find(|m| monitor_key(m) == target_id)
-    } else {
-        app.primary_monitor().map_err(|e| e.to_string())?
-    };
-
-    if let Some(monitor) = target {
-        let pos = monitor.position().clone();
-        let size = monitor.size().clone();
-        window
-            .set_position(tauri::PhysicalPosition::new(pos.x, pos.y))
             .map_err(|e| e.to_string())?;
-        window
-            .set_size(tauri::PhysicalSize::new(size.width, size.height))
-            .map_err(|e| e.to_string())?;
+
+        let target = monitors.iter().find(|m| monitor_key(m) == *target_id);
+
+        if let Some(monitor) = target {
+            let pos = monitor.position().clone();
+            let size = monitor.size().clone();
+            window
+                .set_position(tauri::PhysicalPosition::new(pos.x, pos.y))
+                .map_err(|e| e.to_string())?;
+            window
+                .set_size(tauri::PhysicalSize::new(size.width, size.height))
+                .map_err(|e| e.to_string())?;
+        }
+
+        window.show().map_err(|e| e.to_string())?;
+        window.set_fullscreen(true).map_err(|e| e.to_string())?;
     }
-
-    window.show().map_err(|e| e.to_string())?;
-    window.set_fullscreen(true).map_err(|e| e.to_string())?;
 
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.set_focus();
@@ -175,11 +184,23 @@ async fn open_projection(app: AppHandle, monitor_id: Option<String>) -> Result<(
     Ok(())
 }
 
+fn close_all_viewscreens(app: &AppHandle) {
+    let labels: Vec<String> = app
+        .webview_windows()
+        .into_iter()
+        .map(|(label, _win)| label)
+        .filter(|label| label.starts_with(VIEWSCREEN_PREFIX))
+        .collect();
+    for label in labels {
+        if let Some(w) = app.get_webview_window(&label) {
+            let _ = w.destroy();
+        }
+    }
+}
+
 #[tauri::command]
 fn close_projection(app: AppHandle) {
-    if let Some(w) = app.get_webview_window(VIEWSCREEN_LABEL) {
-        let _ = w.destroy();
-    }
+    close_all_viewscreens(&app);
 }
 
 #[tauri::command]
@@ -200,9 +221,8 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let WindowEvent::Destroyed = event {
                 if window.label() == "main" {
-                    if let Some(viewscreen) = window.get_webview_window(VIEWSCREEN_LABEL) {
-                        let _ = viewscreen.destroy();
-                    }
+                    let app = window.app_handle();
+                    close_all_viewscreens(app);
                 }
             }
         })
@@ -213,7 +233,7 @@ pub fn run() {
             list_monitors,
             get_monitor_config,
             set_monitor_config,
-            open_projection,
+            open_projections,
             close_projection,
             save_file
         ])

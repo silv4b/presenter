@@ -15,16 +15,16 @@ export async function listMonitors(): Promise<MonitorInfo[]> {
   return invoke<MonitorInfo[]>("list_monitors");
 }
 
-export async function getMonitorConfig(): Promise<string | null> {
-  return invoke<string | null>("get_monitor_config");
+export async function getMonitorConfig(): Promise<string[]> {
+  return invoke<string[] | null>("get_monitor_config").then((v) => v ?? []);
 }
 
-export async function setMonitorConfig(id: string): Promise<void> {
-  await invoke("set_monitor_config", { id });
+export async function setMonitorConfig(ids: string[]): Promise<void> {
+  await invoke("set_monitor_config", { ids });
 }
 
-export async function openProjection(monitorId: string | null): Promise<void> {
-  await invoke("open_projection", { monitorId });
+export async function openProjections(monitorIds: string[]): Promise<void> {
+  await invoke("open_projections", { monitorIds });
 }
 
 export async function closeProjection(): Promise<void> {

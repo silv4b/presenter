@@ -15,7 +15,7 @@ import {
   listMonitors,
   getMonitorConfig,
   setMonitorConfig,
-  openProjection,
+  openProjections,
   closeProjection,
   type MonitorInfo,
 } from "@/lib/monitors";
@@ -38,7 +38,7 @@ interface PresentationContextValue {
   isSingleMonitor: boolean;
   blackScreen: boolean;
   monitors: MonitorInfo[];
-  selectedMonitor: string | null;
+  selectedMonitors: string[];
   refreshMonitors: () => Promise<void>;
   selectMonitor: (id: string) => void;
   openPdf: () => Promise<void>;
@@ -68,7 +68,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [isPresenting, setIsPresenting] = useState(false);
   const [blackScreen, setBlackScreen] = useState(false);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
-  const [selectedMonitor, setSelectedMonitor] = useState<string | null>(null);
+  const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
 
   useEffect(() => {
@@ -80,8 +80,8 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {});
     getMonitorConfig()
-      .then((id) => {
-        if (active) setSelectedMonitor(id);
+      .then((ids) => {
+        if (active) setSelectedMonitors(ids);
       })
       .catch(() => {});
     return () => {
@@ -95,8 +95,11 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectMonitor = useCallback((id: string) => {
-    setSelectedMonitor(id);
-    setMonitorConfig(id).catch(() => {});
+    setSelectedMonitors((prev) => {
+      const next = prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id];
+      setMonitorConfig(next).catch(() => {});
+      return next;
+    });
   }, []);
 
   const openPdf = useCallback(async () => {
@@ -179,7 +182,10 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       }
     } else {
       try {
-        await openProjection(selectedMonitor);
+        const ids = selectedMonitors.length > 0
+          ? selectedMonitors
+          : monitors.filter((m) => m.primary).map((m) => m.id);
+        await openProjections(ids);
       } catch (e) {
         console.error("Falha ao abrir a tela de projeção", e);
       }
@@ -189,7 +195,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       () => {},
     );
     emit(EVENT_BLACK_SCREEN, { black: blackScreen }).catch(() => {});
-  }, [currentPage, blackScreen, selectedMonitor, monitors.length]);
+  }, [currentPage, blackScreen, selectedMonitors, monitors]);
 
   const stopPresentation = useCallback(async () => {
     const singleMonitor = monitors.length <= 1;
@@ -236,7 +242,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       isSingleMonitor,
       blackScreen,
       monitors,
-      selectedMonitor,
+      selectedMonitors,
       refreshMonitors,
       selectMonitor,
       openPdf,
@@ -264,7 +270,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       isSingleMonitor,
       blackScreen,
       monitors,
-      selectedMonitor,
+      selectedMonitors,
       refreshMonitors,
       selectMonitor,
       openPdf,

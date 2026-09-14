@@ -8,7 +8,7 @@ import Viewscreen from "./viewscreen/Viewscreen";
 import "./index.css";
 
 const appWindow = getCurrentWindow();
-const isViewscreen = appWindow.label === "viewscreen";
+const isViewscreen = appWindow.label.startsWith("viewscreen");
 
 if (!isViewscreen) {
   appWindow.onCloseRequested(async (event) => {
