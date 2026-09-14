@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,6 +36,7 @@ import {
   Square,
 } from "lucide-react";
 import { Timer } from "@/components/Timer";
+import { cn } from "@/lib/utils";
 
 function monitorLabel(m: MonitorInfo, index: number): string {
   const readable =
@@ -55,6 +57,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes }: SidebarProps) {
+  const [refreshing, setRefreshing] = useState(false);
   const {
     docName,
     numPages,
@@ -125,11 +128,16 @@ export function Sidebar({ penSize, highlighterSize, eraserRadius, resetToolSizes
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={refreshMonitors}
+                onClick={async () => {
+                  setRefreshing(true);
+                  const min = new Promise((r) => setTimeout(r, 600));
+                  await Promise.all([refreshMonitors(), min]);
+                  setRefreshing(false);
+                }}
                 className="size-6"
                 aria-label="Atualizar monitores"
               >
-                <RefreshCw className="size-3.5" />
+                <RefreshCw className={cn("size-3.5 transition-transform", refreshing && "animate-spin")} />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
