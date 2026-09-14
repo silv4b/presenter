@@ -9,6 +9,7 @@ import {
 } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { emit } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { readPdfAsDataUrl, setDocument } from "@/lib/pdf";
 import {
   listMonitors,
@@ -34,6 +35,7 @@ interface PresentationContextValue {
   loadingDoc: boolean;
   error: string | null;
   isPresenting: boolean;
+  isSingleMonitor: boolean;
   blackScreen: boolean;
   monitors: MonitorInfo[];
   selectedMonitor: string | null;
@@ -130,7 +132,11 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
 
   const closeDocument = useCallback(() => {
     if (isPresenting) {
-      closeProjection().catch(() => {});
+      if (monitors.length <= 1) {
+        getCurrentWindow().setFullscreen(false).catch(() => {});
+      } else {
+        closeProjection().catch(() => {});
+      }
       setIsPresenting(false);
     }
     setDocPath(null);
@@ -139,7 +145,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setNumPages(0);
     setCurrentPage(1);
     setError(null);
-  }, [isPresenting]);
+  }, [isPresenting, monitors.length]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -163,26 +169,44 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   }, [currentPage, goToPage]);
 
   const startPresentation = useCallback(async () => {
-    try {
-      await openProjection(selectedMonitor);
-    } catch (e) {
-      console.error("Falha ao abrir a tela de projeção", e);
+    const singleMonitor = monitors.length <= 1;
+    if (singleMonitor) {
+      try {
+        await getCurrentWindow().setFullscreen(true);
+      } catch (e) {
+        console.error("Falha ao entrar em tela cheia", e);
+      }
+    } else {
+      try {
+        await openProjection(selectedMonitor);
+      } catch (e) {
+        console.error("Falha ao abrir a tela de projeção", e);
+      }
     }
     setIsPresenting(true);
     emit(EVENT_SLIDE_CHANGE, { page: currentPage } satisfies SlideChangePayload).catch(
       () => {},
     );
     emit(EVENT_BLACK_SCREEN, { black: blackScreen }).catch(() => {});
-  }, [currentPage, blackScreen, selectedMonitor]);
+  }, [currentPage, blackScreen, selectedMonitor, monitors.length]);
 
   const stopPresentation = useCallback(async () => {
-    try {
-      await closeProjection();
-    } catch (e) {
-      console.error("Falha ao encerrar a tela de projeção", e);
+    const singleMonitor = monitors.length <= 1;
+    if (singleMonitor) {
+      try {
+        await getCurrentWindow().setFullscreen(false);
+      } catch (e) {
+        console.error("Falha ao sair da tela cheia", e);
+      }
+    } else {
+      try {
+        await closeProjection();
+      } catch (e) {
+        console.error("Falha ao encerrar a tela de projeção", e);
+      }
     }
     setIsPresenting(false);
-  }, []);
+  }, [monitors.length]);
 
   const toggleBlackScreen = useCallback(() => {
     setBlackScreen((prev) => {
@@ -196,6 +220,8 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setActiveTool((prev) => (prev === tool ? null : tool));
   }, []);
 
+  const isSingleMonitor = monitors.length <= 1;
+
   const value = useMemo<PresentationContextValue>(
     () => ({
       docPath,
@@ -206,6 +232,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       loadingDoc,
       error,
       isPresenting,
+      isSingleMonitor,
       blackScreen,
       monitors,
       selectedMonitor,
@@ -233,6 +260,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       loadingDoc,
       error,
       isPresenting,
+      isSingleMonitor,
       blackScreen,
       monitors,
       selectedMonitor,

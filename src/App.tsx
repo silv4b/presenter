@@ -11,7 +11,7 @@ import { NextPreview } from "@/components/NextPreview";
 import { SlideCarousel } from "@/components/SlideCarousel";
 import { Welcome } from "@/components/Welcome";
 import { AnnotationLayer } from "@/components/AnnotationLayer";
-import { PanelRightClose, PanelRightOpen, Settings } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Settings, ChevronLeft, ChevronRight, Square } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,8 @@ function PresenterShell() {
     numPages,
     currentPage,
     isPresenting,
+    isSingleMonitor,
+    blackScreen,
     activeTool,
     setNumPages,
     nextPage,
@@ -64,6 +66,13 @@ function PresenterShell() {
   const [confirmExitOpen, setConfirmExitOpen] = useState(false);
   const [closePending, setClosePending] = useState(false);
   const [resizing, setResizing] = useState(false);
+
+  const confirmExitOpenRef = useRef(false);
+  confirmExitOpenRef.current = confirmExitOpen;
+  const closePendingRef = useRef(false);
+  closePendingRef.current = closePending;
+  const settingsOpenRef = useRef(false);
+  settingsOpenRef.current = settingsOpen;
 
   useEffect(() => {
     localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth));
@@ -118,6 +127,9 @@ function PresenterShell() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const dialogOpen = confirmExitOpenRef.current || closePendingRef.current || settingsOpenRef.current;
+      if (dialogOpen) return;
+
       switch (e.key) {
         case "ArrowRight":
         case "ArrowDown":
@@ -173,185 +185,324 @@ function PresenterShell() {
     toggleBlackScreen,
   ]);
 
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isPresenting && isSingleMonitor) {
+      showControls();
+    } else {
+      setControlsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    }
+  }, [isPresenting, isSingleMonitor, showControls]);
+
+  const fullscreenMode = isPresenting && isSingleMonitor && docDataUrl;
+
+  const handleDialogArrowNav = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const container = e.currentTarget;
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>("button"),
+      );
+      const idx = focusable.indexOf(document.activeElement as HTMLElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const next =
+        e.key === "ArrowRight"
+          ? (idx + 1) % focusable.length
+          : (idx - 1 + focusable.length) % focusable.length;
+      focusable[next].focus();
+    }
+    if (e.key === "Escape") {
+      e.stopPropagation();
+    }
+  }, []);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
-      <Sidebar
-        penSize={annotations.penSize}
-        highlighterSize={annotations.highlighterSize}
-        eraserRadius={annotations.eraserRadius}
-        resetToolSizes={annotations.resetToolSizes}
-      />
-
-      <main className="relative flex flex-1 overflow-hidden">
-        {docDataUrl ? (
-          <>
-            <Document
-              file={docDataUrl}
-              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-              error={<p className="p-8 text-sm text-destructive">Falha ao carregar PDF.</p>}
-              loading={<p className="p-8 text-sm text-muted-foreground">Carregando documento…</p>}
-              suspense={false}
-              className="flex min-h-0 min-w-0 flex-1 flex-col"
-            >
-              <div className="relative min-h-0 flex-1">
-                <PdfStage
-                  pageNumber={currentPage}
-                  numPages={numPages}
-                  className="h-full"
-                  overlay={({ scale }) => (
-                    <AnnotationLayer
-                      scale={scale}
-                      activeTool={activeTool}
-                      interactive
-                      strokes={annotations.strokes}
-                      laser={annotations.laser}
-                      onStrokeStart={annotations.onStrokeStart}
-                      onStrokePoint={annotations.onStrokePoint}
-                      onStrokeEnd={annotations.onStrokeEnd}
-                      onLaser={annotations.onLaser}
-                      onEraseStart={annotations.onEraseStart}
-                      onErasePoint={annotations.onErasePoint}
-                      onEraseEnd={annotations.onEraseEnd}
-                      onEraseAll={annotations.clearAnnotations}
-                      eraserRadius={annotations.eraserRadius}
-                      penSize={annotations.penSize}
-                      highlighterSize={annotations.highlighterSize}
-                      onResize={annotations.adjustSize}
-                    />
-                  )}
+      {fullscreenMode ? (
+        /* ── Single-monitor fullscreen presentation ── */
+        <div
+          className="relative h-full w-full bg-black"
+          onMouseMove={showControls}
+        >
+          <Document
+            file={docDataUrl}
+            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+            error={<p className="p-8 text-sm text-destructive">Falha ao carregar PDF.</p>}
+            loading={<p className="p-8 text-sm text-muted-foreground">Carregando documento…</p>}
+            suspense={false}
+            className="relative h-full"
+          >
+            <PdfStage
+              pageNumber={currentPage}
+              numPages={numPages}
+              className="h-full"
+              overlay={({ scale }) => (
+                <AnnotationLayer
+                  scale={scale}
+                  activeTool={activeTool}
+                  interactive
+                  strokes={annotations.strokes}
+                  laser={annotations.laser}
+                  onStrokeStart={annotations.onStrokeStart}
+                  onStrokePoint={annotations.onStrokePoint}
+                  onStrokeEnd={annotations.onStrokeEnd}
+                  onLaser={annotations.onLaser}
+                  onEraseStart={annotations.onEraseStart}
+                  onErasePoint={annotations.onErasePoint}
+                  onEraseEnd={annotations.onEraseEnd}
+                  onEraseAll={annotations.clearAnnotations}
+                  eraserRadius={annotations.eraserRadius}
+                  penSize={annotations.penSize}
+                  highlighterSize={annotations.highlighterSize}
+                  onResize={annotations.adjustSize}
                 />
-              </div>
-              <SlideCarousel
-                numPages={numPages}
-                currentPage={currentPage}
-                onSelect={goToPage}
-              />
-            </Document>
-
-            <div
-              className={cn(
-                "flex shrink-0 overflow-hidden",
-                !resizing && "transition-[width] duration-300 ease-in-out",
               )}
-              style={{ width: showPreview ? previewWidth + 6 : 0 }}
-            >
-              <div
-                onMouseDown={startResize}
-                className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-primary/60 active:bg-primary"
-                aria-hidden
-              />
-              <aside
-                style={{ width: previewWidth }}
-                className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Próximo
-                  </span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setShowPreview(false)}
-                    aria-label="Ocultar preview"
-                    title="Ocultar preview"
-                  >
-                    <PanelRightClose className="size-4" />
-                  </Button>
-                </div>
-                {currentPage < numPages ? (
-                  <button
-                    type="button"
-                    onClick={nextPage}
-                    title="Avançar para o próximo slide"
-                    className="cursor-pointer"
-                  >
-                    <NextPreview
-                      file={docDataUrl}
-                      pageNumber={currentPage + 1}
-                      width={Math.max(previewWidth - 32, 0)}
-                    />
-                  </button>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Fim da apresentação</p>
-                )}
-                <div className="mt-auto flex justify-end">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setSettingsOpen(true)}
-                    aria-label="Configurações"
-                    title="Configurações"
-                  >
-                    <Settings className="size-4" />
-                  </Button>
-                </div>
-              </aside>
-            </div>
+            />
+          </Document>
 
-            {!showPreview && (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setShowPreview(true)}
-                aria-label="Mostrar preview"
-                title="Mostrar preview"
-                className="absolute right-3 top-3 z-10"
-              >
-                <PanelRightOpen className="size-4" />
-              </Button>
+          {/* Black screen overlay */}
+          {blackScreen && (
+            <div className="absolute inset-0 z-10 bg-black" />
+          )}
+
+          {/* Floating controls */}
+          <div
+            className={cn(
+              "absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent py-4 transition-opacity duration-300",
+              controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none",
             )}
-          </>
-        ) : (
-          <Welcome onOpenSettings={() => setSettingsOpen(true)} />
-        )}
+          >
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              onClick={prevPage}
+              disabled={currentPage <= 1}
+            >
+              <ChevronLeft className="size-5" />
+            </Button>
+            <span className="min-w-[5rem] text-center text-sm font-medium text-white/80 tabular-nums">
+              {currentPage} / {numPages}
+            </span>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              onClick={nextPage}
+              disabled={currentPage >= numPages}
+            >
+              <ChevronRight className="size-5" />
+            </Button>
+            <div className="mx-2 h-5 w-px bg-white/30" />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-red-500/40"
+              onClick={() => void stopPresentation()}
+              title="Encerrar apresentação (Esc)"
+            >
+              <Square className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* ── Normal layout ── */
+        <>
+          <Sidebar
+            penSize={annotations.penSize}
+            highlighterSize={annotations.highlighterSize}
+            eraserRadius={annotations.eraserRadius}
+            resetToolSizes={annotations.resetToolSizes}
+          />
 
-        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Configurações</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Em breve — configurações do aplicativo.
-            </p>
-          </DialogContent>
-        </Dialog>
+          <main className="relative flex flex-1 overflow-hidden">
+            {docDataUrl ? (
+              <>
+                <Document
+                  file={docDataUrl}
+                  onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                  error={<p className="p-8 text-sm text-destructive">Falha ao carregar PDF.</p>}
+                  loading={<p className="p-8 text-sm text-muted-foreground">Carregando documento…</p>}
+                  suspense={false}
+                  className="flex min-h-0 min-w-0 flex-1 flex-col"
+                >
+                  <div className="relative min-h-0 flex-1">
+                    <PdfStage
+                      pageNumber={currentPage}
+                      numPages={numPages}
+                      className="h-full"
+                      overlay={({ scale }) => (
+                        <AnnotationLayer
+                          scale={scale}
+                          activeTool={activeTool}
+                          interactive
+                          strokes={annotations.strokes}
+                          laser={annotations.laser}
+                          onStrokeStart={annotations.onStrokeStart}
+                          onStrokePoint={annotations.onStrokePoint}
+                          onStrokeEnd={annotations.onStrokeEnd}
+                          onLaser={annotations.onLaser}
+                          onEraseStart={annotations.onEraseStart}
+                          onErasePoint={annotations.onErasePoint}
+                          onEraseEnd={annotations.onEraseEnd}
+                          onEraseAll={annotations.clearAnnotations}
+                          eraserRadius={annotations.eraserRadius}
+                          penSize={annotations.penSize}
+                          highlighterSize={annotations.highlighterSize}
+                          onResize={annotations.adjustSize}
+                        />
+                      )}
+                    />
+                  </div>
+                  <SlideCarousel
+                    numPages={numPages}
+                    currentPage={currentPage}
+                    onSelect={goToPage}
+                  />
+                </Document>
 
-        <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Encerrar apresentação?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja encerrar a apresentação?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void stopPresentation()}>
-                Encerrar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <div
+                  className={cn(
+                    "flex shrink-0 overflow-hidden",
+                    !resizing && "transition-[width] duration-300 ease-in-out",
+                  )}
+                  style={{ width: showPreview ? previewWidth + 6 : 0 }}
+                >
+                  <div
+                    onMouseDown={startResize}
+                    className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-primary/60 active:bg-primary"
+                    aria-hidden
+                  />
+                  <aside
+                    style={{ width: previewWidth }}
+                    className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Próximo
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setShowPreview(false)}
+                        aria-label="Ocultar preview"
+                        title="Ocultar preview"
+                      >
+                        <PanelRightClose className="size-4" />
+                      </Button>
+                    </div>
+                    {currentPage < numPages ? (
+                      <button
+                        type="button"
+                        onClick={nextPage}
+                        title="Avançar para o próximo slide"
+                        className="cursor-pointer"
+                      >
+                        <NextPreview
+                          file={docDataUrl}
+                          pageNumber={currentPage + 1}
+                          width={Math.max(previewWidth - 32, 0)}
+                        />
+                      </button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Fim da apresentação</p>
+                    )}
+                    <div className="mt-auto flex justify-end">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setSettingsOpen(true)}
+                        aria-label="Configurações"
+                        title="Configurações"
+                      >
+                        <Settings className="size-4" />
+                      </Button>
+                    </div>
+                  </aside>
+                </div>
 
-        <AlertDialog open={closePending} onOpenChange={(open) => !open && handleAppCloseCancel()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Fechar o Presenter?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {isPresenting
-                  ? "Uma apresentação está aberta. Ao fechar, a projeção também será encerrada."
-                  : "Um documento está carregado. Deseja realmente fechar o aplicativo?"}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleAppCloseCancel}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void handleAppClose()}>
-                Fechar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </main>
+                {!showPreview && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowPreview(true)}
+                    aria-label="Mostrar preview"
+                    title="Mostrar preview"
+                    className="absolute right-3 top-3 z-10"
+                  >
+                    <PanelRightOpen className="size-4" />
+                  </Button>
+                )}
+              </>
+            ) : (
+              <Welcome onOpenSettings={() => setSettingsOpen(true)} />
+            )}
+          </main>
+        </>
+      )}
+
+      {/* ── Global dialogs (always mounted) ── */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Em breve — configurações do aplicativo.
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
+        <AlertDialogContent onKeyDown={handleDialogArrowNav}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar apresentação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja encerrar a apresentação?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void stopPresentation()}>
+              Encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={closePending} onOpenChange={(open) => !open && handleAppCloseCancel()}>
+        <AlertDialogContent onKeyDown={handleDialogArrowNav}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fechar o Presenter?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isPresenting
+                ? "Uma apresentação está aberta. Ao fechar, a projeção também será encerrada."
+                : "Um documento está carregado. Deseja realmente fechar o aplicativo?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleAppCloseCancel}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleAppClose()}>
+              Fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
