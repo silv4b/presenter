@@ -9,6 +9,7 @@
     "core:window:allow-set-fullscreen",
     "core:window:allow-set-decorations",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-show",
     "core:window:allow-start-dragging",
     "core:window:allow-set-focus",
@@ -17,3 +18,4 @@
     "dialog:default"
   ]
 }
+

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import { PresentationProvider, usePresentation } from "@/state/presentation";
 import { usePresenterAnnotations } from "@/state/annotations";
 import { Document } from "@/lib/pdf";
@@ -60,11 +62,29 @@ function PresenterShell() {
   const [showPreview, setShowPreview] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmExitOpen, setConfirmExitOpen] = useState(false);
+  const [closePending, setClosePending] = useState(false);
   const [resizing, setResizing] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth));
   }, [previewWidth]);
+
+  // Track latest docDataUrl for the close listener
+  const docDataUrlRef = useRef(docDataUrl);
+  docDataUrlRef.current = docDataUrl;
+
+  // Listen for close request from main.tsx handler (registered once)
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+    listen("app-close-requested", () => {
+      if (docDataUrlRef.current) {
+        setClosePending(true);
+      } else {
+        getCurrentWindow().destroy();
+      }
+    }).then((fn) => { unlistenFn = fn; });
+    return () => { unlistenFn?.(); };
+  }, []);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -82,6 +102,18 @@ function PresenterShell() {
     document.body.style.userSelect = "none";
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
+  }, []);
+
+  const handleAppClose = useCallback(async () => {
+    setClosePending(false);
+    if (isPresenting) {
+      await stopPresentation();
+    }
+    await getCurrentWindow().destroy();
+  }, [isPresenting, stopPresentation]);
+
+  const handleAppCloseCancel = useCallback(() => {
+    setClosePending(false);
   }, []);
 
   useEffect(() => {
@@ -296,6 +328,25 @@ function PresenterShell() {
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={() => void stopPresentation()}>
                 Encerrar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={closePending} onOpenChange={(open) => !open && handleAppCloseCancel()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Fechar o Presenter?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {isPresenting
+                  ? "Uma apresentação está aberta. Ao fechar, a projeção também será encerrada."
+                  : "Um documento está carregado. Deseja realmente fechar o aplicativo?"}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleAppCloseCancel}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleAppClose()}>
+                Fechar
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

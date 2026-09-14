@@ -1,7 +1,7 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, Monitor, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, Monitor, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 const VIEWSCREEN_LABEL: &str = "viewscreen";
 
@@ -189,6 +189,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(DocState::default())
         .manage(MonitorState::default())
+        .on_window_event(|window, event| {
+            if let WindowEvent::Destroyed = event {
+                if window.label() == "main" {
+                    if let Some(viewscreen) = window.get_webview_window(VIEWSCREEN_LABEL) {
+                        let _ = viewscreen.destroy();
+                    }
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             read_pdf,
             set_document,
