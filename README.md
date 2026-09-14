@@ -42,6 +42,10 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `End` | Último slide |
 | `B` | Alternar tela preta |
 | `Esc` | Encerrar apresentação (com confirmação) |
+| `L` | Ativar/desativar laser |
+| `P` | Ativar/desativar caneta |
+| `H` | Ativar/desativar marcador de texto |
+| `E` | Ativar/desativar borracha |
 | `Ctrl+Z` | Desfazer última anotação |
 | `Ctrl+Shift+Z` / `Ctrl+Y` | Refazer anotação |
 | `Ctrl+=` / `Ctrl+-` | Zoom in / out |
