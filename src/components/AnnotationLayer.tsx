@@ -5,11 +5,10 @@ import {
   AnnotationTool,
   ERASER_RADIUS,
   HIGHLIGHTER_COLOR,
-  LASER_COLOR,
-  LASER_RADIUS,
   PEN_COLOR,
   Point,
 } from "@/lib/annotations";
+import { drawStrokes, drawLaser, drawEraserCursor, drawToolCursor } from "@/lib/canvasDrawing";
 
 interface AnnotationLayerProps {
   scale: number;
@@ -45,77 +44,17 @@ function drawScene(
   toolCursor: Point | null,
   toolSize: number,
   toolColor: string,
+  laserCursor: Point | null,
 ) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  for (const s of strokes) {
-    if (s.points.length === 0) continue;
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = s.size * scale;
-    if (s.tool === "highlighter") ctx.globalAlpha = 0.45;
-    ctx.beginPath();
-    const first = s.points[0];
-    ctx.moveTo(first.x * scale, first.y * scale);
-    for (let i = 1; i < s.points.length; i++) {
-      ctx.lineTo(s.points[i].x * scale, s.points[i].y * scale);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
+  drawStrokes(ctx, strokes, scale);
 
-  if (laser) {
-    const x = laser.x * scale;
-    const y = laser.y * scale;
-    ctx.save();
-    ctx.globalAlpha = 0.95;
-    ctx.shadowColor = "rgba(255, 59, 48, 0.9)";
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = LASER_COLOR;
-    ctx.beginPath();
-    ctx.arc(x, y, LASER_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  if (eraserPos) {
-    const x = eraserPos.x * scale;
-    const y = eraserPos.y * scale;
-    const r = eraserRadius * scale;
-    ctx.save();
-    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, r + 2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.9)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, r - 2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  if (toolCursor) {
-    const x = toolCursor.x * scale;
-    const y = toolCursor.y * scale;
-    const r = (toolSize / 2) * scale;
-    ctx.save();
-    ctx.strokeStyle = toolColor;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
+  if (laser) drawLaser(ctx, laser, scale);
+  if (laserCursor) drawLaser(ctx, laserCursor, scale);
+  if (eraserPos) drawEraserCursor(ctx, eraserPos, eraserRadius, scale);
+  if (toolCursor) drawToolCursor(ctx, toolCursor, toolSize, toolColor, scale);
 }
 
 export function AnnotationLayer({
@@ -143,6 +82,19 @@ export function AnnotationLayer({
   const erasingRef = useRef(false);
   const [eraserPos, setEraserPos] = useState<Point | null>(null);
   const [toolCursor, setToolCursor] = useState<Point | null>(null);
+  const [laserCursor, setLaserCursor] = useState<Point | null>(null);
+
+  // Track global mouse position for instant cursor on tool switch
+  const lastMouseX = useRef(0);
+  const lastMouseY = useRef(0);
+  useEffect(() => {
+    const handleMouseMove = (e: PointerEvent) => {
+      lastMouseX.current = e.clientX;
+      lastMouseY.current = e.clientY;
+    };
+    window.addEventListener("pointermove", handleMouseMove);
+    return () => window.removeEventListener("pointermove", handleMouseMove);
+  }, []);
 
   const drawing = activeTool === "pen" || activeTool === "highlighter";
   const toolSize = activeTool === "pen" ? penSize : activeTool === "highlighter" ? highlighterSize : 0;
@@ -150,8 +102,99 @@ export function AnnotationLayer({
   const isActive = interactive && activeTool !== null;
 
   useEffect(() => {
+    if (activeTool !== "eraser" || !interactive) return;
+    const getPos = (e: PointerEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return null;
+      return { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
+    };
+    const handleMove = (e: PointerEvent) => {
+      const pos = getPos(e);
+      if (pos) setEraserPos(pos);
+    };
+    window.addEventListener("pointermove", handleMove);
+    // Initialize immediately from the last known mouse position
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
+      if (el && (el === canvas || canvas.contains(el))) {
+        setEraserPos({
+          x: (lastMouseX.current - rect.left) / scale,
+          y: (lastMouseY.current - rect.top) / scale,
+        });
+      }
+    }
+    return () => window.removeEventListener("pointermove", handleMove);
+  }, [activeTool, interactive, scale]);
+
+  useEffect(() => {
+    if ((activeTool !== "pen" && activeTool !== "highlighter") || !interactive) return;
+    const handleMove = (e: PointerEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        setToolCursor(null);
+        return;
+      }
+      setToolCursor({
+        x: (e.clientX - rect.left) / scale,
+        y: (e.clientY - rect.top) / scale,
+      });
+    };
+    window.addEventListener("pointermove", handleMove);
+    // Initialize immediately from the last known mouse position
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
+      if (el && (el === canvas || canvas.contains(el))) {
+        setToolCursor({
+          x: (lastMouseX.current - rect.left) / scale,
+          y: (lastMouseY.current - rect.top) / scale,
+        });
+      }
+    }
+    return () => window.removeEventListener("pointermove", handleMove);
+  }, [activeTool, interactive, scale, penSize, highlighterSize]);
+
+  useEffect(() => {
+    if (activeTool !== "laser" || !interactive) return;
+    const handleMove = (e: PointerEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        setLaserCursor(null);
+        return;
+      }
+      setLaserCursor({
+        x: (e.clientX - rect.left) / scale,
+        y: (e.clientY - rect.top) / scale,
+      });
+    };
+    window.addEventListener("pointermove", handleMove);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
+      if (el && (el === canvas || canvas.contains(el))) {
+        setLaserCursor({
+          x: (lastMouseX.current - rect.left) / scale,
+          y: (lastMouseY.current - rect.top) / scale,
+        });
+      }
+    }
+    return () => window.removeEventListener("pointermove", handleMove);
+  }, [activeTool, interactive, scale]);
+
+  useEffect(() => {
     if (activeTool !== "eraser") setEraserPos(null);
     if (activeTool !== "pen" && activeTool !== "highlighter") setToolCursor(null);
+    if (activeTool !== "laser") setLaserCursor(null);
   }, [activeTool]);
 
   useEffect(() => {
@@ -165,8 +208,8 @@ export function AnnotationLayer({
     canvas.height = Math.round(h * dpr);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawScene(ctx, dpr, w, h, scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor);
-  }, [scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor]);
+    drawScene(ctx, dpr, w, h, scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor, laserCursor);
+  }, [scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor, laserCursor]);
 
   const toPoint = useCallback(
     (clientX: number, clientY: number): Point => {

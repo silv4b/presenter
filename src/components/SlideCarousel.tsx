@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Page } from "@/lib/pdf";
 import { cn } from "@/lib/utils";
 import type { AnnotationStroke } from "@/lib/annotations";
+import { drawStrokes } from "@/lib/canvasDrawing";
 
 interface SlideCarouselProps {
   numPages: number;
@@ -29,24 +30,7 @@ function drawThumbnailAnnotations(
   canvas.height = thumbH * 2;
   ctx.setTransform(2, 0, 0, 2, 0, 0);
   ctx.clearRect(0, 0, thumbW, thumbH);
-
-  const scale = thumbH / pageH;
-  for (const s of strokes) {
-    if (s.points.length < 2) continue;
-    ctx.save();
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = Math.max(s.size * scale, 0.5);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    if (s.tool === "highlighter") ctx.globalAlpha = 0.45;
-    ctx.beginPath();
-    ctx.moveTo(s.points[0].x * scale, s.points[0].y * scale);
-    for (let i = 1; i < s.points.length; i++) {
-      ctx.lineTo(s.points[i].x * scale, s.points[i].y * scale);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
+  drawStrokes(ctx, strokes, thumbH / pageH);
 }
 
 export function SlideCarousel({
