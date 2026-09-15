@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { usePresentation } from "@/state/presentation";
-import { FolderOpen, Keyboard, Settings } from "lucide-react";
+import { FolderOpen, FileUp, Keyboard, Settings } from "lucide-react";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 const shortcuts: [string, string][] = [
   ["F5", "Iniciar / encerrar apresentação"],
@@ -14,10 +16,64 @@ const shortcuts: [string, string][] = [
 ];
 
 export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
-  const { openPdf } = usePresentation();
+  const { openPdf, loadPdfFromPath } = usePresentation();
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const webview = getCurrentWebview();
+    const unlisten = webview.onDragDropEvent((event) => {
+      if (event.payload.type === "over") {
+        setIsDragging(true);
+      } else if (event.payload.type === "drop") {
+        setIsDragging(false);
+        const pdfPath = event.payload.paths.find((p) =>
+          p.toLowerCase().endsWith(".pdf"),
+        );
+        if (pdfPath) loadPdfFromPath(pdfPath);
+      } else {
+        setIsDragging(false);
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [loadPdfFromPath]);
 
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center gap-8 p-8">
+    <div
+      className="relative flex h-full w-full flex-col items-center justify-center gap-8 p-8"
+      onDragOver={(e) => e.preventDefault()}
+    >
+      <style>{`
+        @keyframes drop-enter {
+          0% { opacity: 0; transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+
+      {/* Drag overlay */}
+      <div
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-primary/5 backdrop-blur-sm transition-all duration-300 ease-out ${
+          isDragging
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          className="flex flex-col items-center gap-4"
+          style={isDragging ? { animation: "drop-enter 0.3s ease-out" } : undefined}
+        >
+          <div className="rounded-full bg-primary/10 p-6">
+            <FileUp className="size-12 text-primary" strokeWidth={1.5} />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-medium text-primary">Solte o arquivo PDF aqui</p>
+            <p className="text-sm text-muted-foreground">Arquivos .pdf são aceitos</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Normal content */}
       <div className="flex flex-col items-center gap-3 text-center">
         <h1 className="text-2xl font-semibold">Presenter</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
