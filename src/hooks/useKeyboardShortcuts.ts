@@ -22,6 +22,7 @@ interface UseKeyboardShortcutsOptions {
   zoomOut: () => void;
   zoomReset: () => void;
   onEscape?: () => void;
+  openPdf?: () => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
@@ -88,6 +89,11 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           if (!isInput) { e.preventDefault(); o.toggleTool("highlighter"); } break;
         case "e": case "E":
           if (!isInput) { e.preventDefault(); o.toggleTool("eraser"); } break;
+        case "o": case "O":
+          if (!isInput && !o.docLoaded && o.openPdf) {
+            e.preventDefault(); o.openPdf();
+          }
+          break;
       }
     }
     window.addEventListener("keydown", onKeyDown);

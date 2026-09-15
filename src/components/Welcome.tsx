@@ -6,6 +6,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 const shortcuts: [string, string][] = [
   ["F5", "Iniciar / encerrar apresentação"],
+  ["O", "Abrir PDF"],
   ["→ / Espaço", "Próximo slide"],
   ["←", "Slide anterior"],
   ["B", "Tela preta"],

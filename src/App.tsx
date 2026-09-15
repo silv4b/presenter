@@ -56,6 +56,7 @@ function PresenterShell() {
     stopPresentation,
     toggleBlackScreen,
     closeDocument,
+    openPdf,
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
@@ -183,6 +184,7 @@ function PresenterShell() {
       if (isPresenting) setConfirmExitOpen(true);
       else if (docDataUrl) setCloseDocPending(true);
     },
+    openPdf,
   });
 
   const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible } = useAutoHide(3000);
