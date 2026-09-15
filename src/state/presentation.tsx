@@ -25,6 +25,7 @@ import {
   type SlideChangePayload,
 } from "@/lib/shared";
 import { EVENT_ANNOTATION_CLEAR, type AnnotationTool } from "@/lib/annotations";
+import { addToHistory } from "@/lib/fileHistory";
 
 interface PresentationContextValue {
   docPath: string | null;
@@ -125,6 +126,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       setDocDataUrl(dataUrl);
       setCurrentPage(1);
       setNumPages(0);
+      addToHistory(path);
       await setDocument(path, name, 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

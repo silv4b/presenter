@@ -13,6 +13,10 @@ export async function readPdfAsDataUrl(path: string): Promise<string> {
   return invoke<string>("read_pdf", { path });
 }
 
+export async function fileExists(path: string): Promise<boolean> {
+  return invoke<boolean>("file_exists", { path });
+}
+
 export async function setDocument(
   path: string,
   name: string,

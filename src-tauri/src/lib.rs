@@ -38,6 +38,11 @@ fn read_pdf(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn file_exists(path: String) -> bool {
+    std::path::Path::new(&path).exists()
+}
+
+#[tauri::command]
 fn set_document(state: tauri::State<DocState>, path: String, name: String, page: u32) {
     *state.0.lock().unwrap() = Some(DocInfo { path, name, page });
 }
@@ -228,6 +233,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             read_pdf,
+            file_exists,
             set_document,
             get_document,
             list_monitors,
