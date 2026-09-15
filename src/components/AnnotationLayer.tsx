@@ -80,6 +80,8 @@ export function AnnotationLayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
   const erasingRef = useRef(false);
+  const shiftRef = useRef(false);
+  const strokeStartRef = useRef<Point | null>(null);
   const [eraserPos, setEraserPos] = useState<Point | null>(null);
   const [toolCursor, setToolCursor] = useState<Point | null>(null);
   const [laserCursor, setLaserCursor] = useState<Point | null>(null);
@@ -94,6 +96,21 @@ export function AnnotationLayer({
     };
     window.addEventListener("pointermove", handleMouseMove);
     return () => window.removeEventListener("pointermove", handleMouseMove);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") shiftRef.current = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") shiftRef.current = false;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
   }, []);
 
   const drawing = activeTool === "pen" || activeTool === "highlighter";
@@ -230,7 +247,9 @@ export function AnnotationLayer({
       e.preventDefault();
       drawingRef.current = true;
       e.currentTarget.setPointerCapture(e.pointerId);
-      onStrokeStart(activeTool, toPoint(e.clientX, e.clientY));
+      const p = toPoint(e.clientX, e.clientY);
+      strokeStartRef.current = p;
+      onStrokeStart(activeTool, p);
     } else if (activeTool === "laser") {
       onLaser(toPoint(e.clientX, e.clientY));
     } else if (activeTool === "eraser") {
@@ -245,8 +264,17 @@ export function AnnotationLayer({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!interactive) return;
-    const p = toPoint(e.clientX, e.clientY);
+    let p = toPoint(e.clientX, e.clientY);
     if (drawingRef.current) {
+      if (shiftRef.current && strokeStartRef.current) {
+        const s = strokeStartRef.current;
+        const dx = p.x - s.x;
+        const dy = p.y - s.y;
+        const angle = Math.atan2(dy, dx);
+        const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        p = { x: s.x + Math.cos(snapped) * dist, y: s.y + Math.sin(snapped) * dist };
+      }
       onStrokePoint(p);
     } else if (activeTool === "pen" || activeTool === "highlighter") {
       setToolCursor(p);
@@ -262,6 +290,7 @@ export function AnnotationLayer({
     if (!interactive) return;
     if (drawingRef.current) {
       drawingRef.current = false;
+      strokeStartRef.current = null;
       onStrokeEnd();
     } else if (activeTool === "laser") {
       onLaser(null);
