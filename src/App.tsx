@@ -248,16 +248,7 @@ function PresenterShell() {
         </div>
       ) : (
         <>
-          <Sidebar
-            penSize={annotations.penSize}
-            highlighterSize={annotations.highlighterSize}
-            eraserRadius={annotations.eraserRadius}
-            resetToolSizes={annotations.resetToolSizes}
-            undo={annotations.undo}
-            redo={annotations.redo}
-            canUndo={annotations.canUndo}
-            canRedo={annotations.canRedo}
-          />
+          <Sidebar />
 
           <main className="relative flex flex-1 overflow-hidden" onWheel={handleWheelZoom}>
             {docDataUrl ? (

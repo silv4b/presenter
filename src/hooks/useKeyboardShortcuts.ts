@@ -82,13 +82,13 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
         case "b": case "B":
           if (o.isPresenting) o.toggleBlackScreen(); break;
         case "l": case "L":
-          if (!isInput) { e.preventDefault(); o.toggleTool("laser"); } break;
+          if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("laser"); } break;
         case "p": case "P":
-          if (!isInput) { e.preventDefault(); o.toggleTool("pen"); } break;
+          if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("pen"); } break;
         case "h": case "H":
-          if (!isInput) { e.preventDefault(); o.toggleTool("highlighter"); } break;
+          if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("highlighter"); } break;
         case "e": case "E":
-          if (!isInput) { e.preventDefault(); o.toggleTool("eraser"); } break;
+          if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("eraser"); } break;
         case "o": case "O":
           if (!isInput && !o.docLoaded && o.openPdf) {
             e.preventDefault(); o.openPdf();
