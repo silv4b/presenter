@@ -21,6 +21,8 @@ export function AnnotationLayerContainer({
     penSize,
     highlighterSize,
     eraserRadius,
+    penColor,
+    highlighterColor,
     onStrokeStart,
     onStrokePoint,
     onStrokeEnd,
@@ -54,6 +56,8 @@ export function AnnotationLayerContainer({
       eraserRadius={eraserRadius}
       penSize={penSize}
       highlighterSize={highlighterSize}
+      penColor={penColor}
+      highlighterColor={highlighterColor}
       onResize={adjustSize}
       annotationCanvasRef={annotationCanvasRef}
     />

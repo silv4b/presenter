@@ -27,6 +27,8 @@ interface AnnotationLayerProps {
   eraserRadius?: number;
   penSize?: number;
   highlighterSize?: number;
+  penColor?: string;
+  highlighterColor?: string;
   onResize?: (deltaY: number) => void;
   annotationCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
@@ -74,6 +76,8 @@ export function AnnotationLayer({
   eraserRadius = ERASER_RADIUS,
   penSize = 2.5,
   highlighterSize = 18,
+  penColor = PEN_COLOR,
+  highlighterColor = HIGHLIGHTER_COLOR,
   onResize,
   annotationCanvasRef,
 }: AnnotationLayerProps) {
@@ -115,7 +119,7 @@ export function AnnotationLayer({
 
   const drawing = activeTool === "pen" || activeTool === "highlighter";
   const toolSize = activeTool === "pen" ? penSize : activeTool === "highlighter" ? highlighterSize : 0;
-  const toolColor = activeTool === "pen" ? PEN_COLOR : activeTool === "highlighter" ? HIGHLIGHTER_COLOR : "";
+  const toolColor = activeTool === "pen" ? penColor : activeTool === "highlighter" ? highlighterColor : "";
   const isActive = interactive && activeTool !== null;
 
   useEffect(() => {

@@ -61,8 +61,13 @@ export interface PresenterAnnotations {
   penSize: number;
   highlighterSize: number;
   eraserRadius: number;
+  penColor: string;
+  highlighterColor: string;
+  setPenColor: (color: string) => void;
+  setHighlighterColor: (color: string) => void;
   adjustSize: (deltaY: number) => void;
   resetToolSizes: () => void;
+  resetColors: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -79,6 +84,8 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   const [penSize, setPenSize] = useState(PEN_SIZE);
   const [highlighterSize, setHighlighterSize] = useState(HIGHLIGHTER_SIZE);
   const [eraserRadius, setEraserRadius] = useState(ERASER_RADIUS);
+  const [penColor, setPenColor] = useState(PEN_COLOR);
+  const [highlighterColor, setHighlighterColor] = useState(HIGHLIGHTER_COLOR);
 
   const penSizeRef = useRef(PEN_SIZE);
   const highlighterSizeRef = useRef(HIGHLIGHTER_SIZE);
@@ -90,6 +97,11 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => { penSizeRef.current = penSize; }, [penSize]);
   useEffect(() => { highlighterSizeRef.current = highlighterSize; }, [highlighterSize]);
   useEffect(() => { eraserRadiusRef.current = eraserRadius; }, [eraserRadius]);
+
+  const penColorRef = useRef(PEN_COLOR);
+  const highlighterColorRef = useRef(HIGHLIGHTER_COLOR);
+  useEffect(() => { penColorRef.current = penColor; }, [penColor]);
+  useEffect(() => { highlighterColorRef.current = highlighterColor; }, [highlighterColor]);
 
   const activeStrokeRef = useRef<AnnotationStroke | null>(null);
   const activePointsRef = useRef<Point[]>([]);
@@ -139,7 +151,7 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
         id: nextStrokeId(),
         page: currentPageRef.current,
         tool,
-        color: tool === "pen" ? PEN_COLOR : HIGHLIGHTER_COLOR,
+        color: tool === "pen" ? penColorRef.current : highlighterColorRef.current,
         size: tool === "pen" ? penSizeRef.current : highlighterSizeRef.current,
         points: [point],
       };
@@ -339,13 +351,19 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
     setEraserRadius(ERASER_RADIUS);
   }, []);
 
+  const resetColors = useCallback(() => {
+    setPenColor(PEN_COLOR);
+    setHighlighterColor(HIGHLIGHTER_COLOR);
+  }, []);
+
   const value: PresenterAnnotations = {
     strokes, strokesByPage, laser,
     onStrokeStart, onStrokePoint, onStrokeEnd, onLaser,
     onEraseStart, onErasePoint, onEraseEnd,
     clearAnnotations, clearPage,
     penSize, highlighterSize, eraserRadius,
-    adjustSize, resetToolSizes,
+    penColor, highlighterColor, setPenColor, setHighlighterColor,
+    adjustSize, resetToolSizes, resetColors,
     undo, redo, canUndo, canRedo,
   };
 
