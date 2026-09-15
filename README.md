@@ -10,7 +10,8 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 
 ## Recursos
 
-- **Abertura de PDF** — selecione qualquer arquivo `.pdf` do computador.
+- **Abertura de PDF** — selecione qualquer arquivo `.pdf` do computador, arraste e solte na tela inicial ou use o atalho `O`.
+- **Histórico de arquivos** — sidebar na tela inicial exibe os últimos PDFs abertos; clique para reabrir (com verificação de existência e dialog de erro se o arquivo não for encontrado).
 - **Renderização em alta resolução** — cada página é desenhada em `<canvas>` via PDF.js (react-pdf), redimensionando-se automaticamente ao tamanho da janela.
 - **Modo apresentador multi-janela** — a janela principal controla janelas `viewscreen-{idx}` exibidas em tela cheia nos monitores selecionados.
 - **Modo tela cheia com monitor único** — quando há apenas um monitor, a janela principal entra em tela cheia com controles flutuantes.
@@ -28,6 +29,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
   - **Laser** — ponteiro luminoso vermelho para chamar atenção.
   - **Borracha** — apague apenas os traços selecionados arrastando sobre eles (raio ajustável via scroll; duplo-clique apaga tudo na página).
   - **Desfazer / Refazer** — Ctrl+Z / Ctrl+Shift+Z para desfazer e refazer anotações (até 50 passos).
+  - **Linhas retas** — segure Shift durante o arraste para travar o traço em ângulos de 45° (caneta e marcador).
 - **Botão de reset de tamanhos** — restaura os tamanhos padrão das ferramentas de anotação.
 - **Confirmação ao fechar** — impede fechamento acidental quando há PDF ou apresentação ativa.
 
@@ -36,6 +38,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | Tecla | Ação |
 | --- | --- |
 | `F5` | Iniciar / Encerrar apresentação |
+| `O` | Abrir PDF (tela inicial) |
 | `→` / `Espaço` / `Page Down` | Próximo slide |
 | `←` / `Page Up` | Slide anterior |
 | `Home` | Primeiro slide |
@@ -86,20 +89,22 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
     - `SlideCarousel.tsx` — filmstrip de miniaturas com anotações e altura ajustável
     - `NextPreview.tsx` — preview do próximo slide
     - `Timer.tsx` — cronômetro progressivo/regressivo
-    - `Welcome.tsx` — tela inicial vazia
+    - `Welcome.tsx` — tela inicial com drag-and-drop e atalhos
+    - `WelcomeSidebar.tsx` — sidebar de histórico de arquivos recentes
   - `src/viewscreen/` — janela de projeção (instância secundária)
   - `src/hooks/` — hooks customizados
     - `useKeyboardShortcuts.ts` — atalhos de teclado globais
     - `useAutoHide.ts` — auto-hide para controles flutuantes
   - `src/lib/` — helpers
-    - `pdf.ts` — leitura de PDF e comandos Rust (read_pdf, set_document, get_document)
+    - `pdf.ts` — leitura de PDF e comandos Rust (read_pdf, set_document, get_document, file_exists)
     - `monitors.ts` — detecção de monitores, config persistida e comandos de projeção
     - `annotations.ts` — tipos, constantes e utilidades de anotações (distâncias, eraser logic)
     - `canvasDrawing.ts` — funções de desenho compartilhadas (drawStrokes, drawLaser, drawEraserCursor, drawToolCursor)
     - `exportPdf.ts` — exportação de PDF com anotações incorporadas
+    - `fileHistory.ts` — histórico de arquivos abertos (localStorage)
     - `shared.ts` — constantes de eventos e interfaces compartilhadas
 - `src-tauri/` — backend Rust
-  - `src/lib.rs` — comandos (`read_pdf`, `set_document`, `get_document`, `list_monitors`, `open_projections`, `close_projection`, `save_file`, etc.) e ícone embutido
+  - `src/lib.rs` — comandos (`read_pdf`, `file_exists`, `set_document`, `get_document`, `list_monitors`, `open_projections`, `close_projection`, `save_file`, etc.) e ícone embutido
   - `capabilities/default.json` — permissões das janelas
   - `tauri.conf.json` — configuração do app e janelas
 
@@ -135,7 +140,7 @@ A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (
    npm run tauri build
    ```
 
-   Os artefatos são gerados em `src-tauri/target/release/bundle/` (`.msi` e `.exe` no Windows).
+    Os artefatos são gerados em `src-tauri/target/release/bundle/` (`.exe` NSIS no Windows). O installador NSIS usa um ícone personalizado configurado em `tauri.conf.json`.
 
 ### Uso
 
@@ -145,3 +150,14 @@ A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (
 4. Navegue com as setas, `Espaço` ou pelos controles da sidebar.
 5. Use as ferramentas de anotação (caneta, marcador, laser, borracha) na barra inferior da sidebar.
 6. Use `B` para tela preta e `F5`/`Esc` para encerrar.
+
+## CI/CD
+
+O projeto possui workflows automatizados no GitHub Actions:
+
+- **`build-windows.yml`** — gera o instalador NSIS (`.exe`) no `windows-latest`
+- **`build-linux.yml`** — gera pacotes `.deb` e `.AppImage` no `ubuntu-24.04`
+- **`build-macos.yml`** — gera o instalador `.dmg` no `macos-latest` (ARM64)
+- **`release.yml`** — disparado por tags `v*`, builda para todas as plataformas e cria um draft de release no GitHub com os artefatos
+
+Todos os workflows rodam a cada push na branch `main` e podem ser disparados manualmente (`workflow_dispatch`).
