@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import { usePresentation } from "@/state/presentation";
 import { usePresenterAnnotations } from "@/state/annotations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ColorPicker } from "@/components/ColorPicker";
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,7 +38,10 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     penSize,
     highlighterSize,
     eraserRadius,
+    setPenColor,
+    setHighlighterColor,
     resetToolSizes,
+    resetColors,
     undo,
     redo,
     canUndo,
@@ -52,6 +57,17 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     ["highlighter", Highlighter, "Marcador (H)"],
     ["eraser", Eraser, "Borracha (E)"],
   ];
+
+  const showColorPicker = activeTool === "pen" || activeTool === "highlighter";
+  const lastPickedRef = useRef<string | null>(null);
+  const [colorResetKey, setColorResetKey] = useState(0);
+
+  useEffect(() => {
+    if (activeTool !== "pen" && activeTool !== "highlighter") return;
+    if (lastPickedRef.current === null) return;
+    if (activeTool === "pen") setPenColor(lastPickedRef.current);
+    else setHighlighterColor(lastPickedRef.current);
+  }, [activeTool, setPenColor, setHighlighterColor]);
 
   return (
     <>
@@ -77,13 +93,34 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         </Button>
       </div>
 
-      {/* Annotation tools */}
+      {/* Color picker + Annotation tools */}
       <div
         className={cn(
           "absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm transition-opacity duration-300",
           visible ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
       >
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-300 ease-in-out",
+            showColorPicker ? "w-44 h-8 opacity-100" : "w-0 h-8 opacity-0",
+          )}
+        >
+          <div className="flex h-8 items-center px-1.5">
+            <ColorPicker
+              resetKey={colorResetKey}
+              onChange={(c) => {
+                lastPickedRef.current = c;
+                if (activeTool === "pen") setPenColor(c);
+                else setHighlighterColor(c);
+              }}
+              variant="dark"
+            />
+          </div>
+        </div>
+        {showColorPicker && (
+          <div className="mx-1 h-5 w-px bg-white/20" />
+        )}
         {tools.map(([tool, Icon, label]) => (
           <Button key={tool} size="icon" variant="ghost" className={toolClass(tool)} onClick={() => toggleTool(tool)} title={label}>
             <Icon className="size-4" />
@@ -92,7 +129,7 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         <div className="mx-1 h-5 w-px bg-white/20" />
         <Button
           size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10"
-          onClick={resetToolSizes}
+          onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); }}
           disabled={penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER}
           title="Restaurar tamanhos padrão"
         >
