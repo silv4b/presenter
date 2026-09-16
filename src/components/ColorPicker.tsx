@@ -14,9 +14,11 @@ interface ColorPickerProps {
   resetKey?: number;
   onChange: (color: string) => void;
   variant?: "default" | "dark";
+  disabled?: boolean;
+  onEditingChange?: (editing: boolean) => void;
 }
 
-export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: ColorPickerProps) {
+export function ColorPicker({ resetKey = 0, onChange, variant = "default", disabled, onEditingChange }: ColorPickerProps) {
   const [editing, setEditing] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hexInput, setHexInput] = useState("");
@@ -25,6 +27,8 @@ export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: Col
   const containerRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onEditingChangeRef = useRef(onEditingChange);
+  onEditingChangeRef.current = onEditingChange;
   const prevResetKeyRef = useRef(resetKey);
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: Col
       inputRef.current?.focus();
       inputRef.current?.select();
     }
+    onEditingChangeRef.current?.(editing);
   }, [editing]);
 
   useEffect(() => {
@@ -76,51 +81,91 @@ export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: Col
   };
 
   return (
-    <div ref={containerRef} className="flex items-center gap-2">
-      <div className="flex flex-col items-center gap-3">
-        {editing && (
-          <div className="flex items-center gap-1">
-            <span className={cn("text-[18px]", variant === "dark" ? "text-white/60" : "text-muted-foreground")}>#</span>
+    <div ref={containerRef} className={cn("flex items-center gap-2", disabled && "opacity-30 pointer-events-none")}>
+      {variant === "dark" ? (
+        <>
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="text-[18px] text-white/60">#</span>
             <input
               ref={inputRef}
               type="text"
               value={hexInput}
               onChange={(e) => handleHexChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
               onKeyDown={(e) => {
-                if (e.key === "Escape" || e.key === "Enter") setEditing(false);
+                if (e.key === "Escape") { e.stopPropagation(); e.currentTarget.blur(); }
+                if (e.key === "Enter") setEditing(false);
               }}
               maxLength={6}
-              className={cn(
-                "w-20 rounded border px-1.5 py-1 font-mono outline-none",
-                variant === "dark"
-                  ? "border-white/20 bg-white/10 text-white placeholder-white/40"
-                  : "border-border bg-muted text-foreground placeholder-muted-foreground",
-              )}
+              className="w-20 shrink-0 rounded border border-white/20 bg-white/10 px-1.5 py-1 font-mono text-xs text-white outline-none placeholder-white/40"
               placeholder="000000"
             />
           </div>
-        )}
-        <div className="flex items-center gap-2">
-          {PRESET_COLORS.map((c, i) => {
-            const isActive = i === activeIndex;
-            const bg = customColors[i] ?? c;
-            return (
-              <button
-                key={c}
-                type="button"
-                className={cn(
-                  "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
-                  variant === "dark" ? "border-white/30" : "border-border",
-                  isActive && (variant === "dark" ? "border-white scale-110" : "border-foreground scale-110"),
-                )}
-                style={{ backgroundColor: bg }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => handleCircleClick(c, i)}
+          <div className="shrink-0 rounded-full bg-white/30 h-5 w-0.5" />
+          <div className="flex shrink-0 items-center gap-2">
+            {PRESET_COLORS.map((c, i) => {
+              const isActive = i === activeIndex;
+              const bg = customColors[i] ?? c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  className={cn(
+                    "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                    "border-white/30",
+                    isActive && "border-white scale-110",
+                  )}
+                  style={{ backgroundColor: bg }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => handleCircleClick(c, i)}
+                />
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-2">
+          {editing && (
+            <div className="flex items-center gap-1">
+              <span className="text-[18px] text-muted-foreground">#</span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={hexInput}
+                onChange={(e) => handleHexChange(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { e.stopPropagation(); e.currentTarget.blur(); }
+                  if (e.key === "Enter") setEditing(false);
+                }}
+                maxLength={6}
+                className="w-20 rounded border border-border bg-muted px-1.5 py-1 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
+                placeholder="000000"
               />
-            );
-          })}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {PRESET_COLORS.map((c, i) => {
+              const isActive = i === activeIndex;
+              const bg = customColors[i] ?? c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  className={cn(
+                    "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                    "border-border",
+                    isActive && "border-foreground scale-110",
+                  )}
+                  style={{ backgroundColor: bg }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => handleCircleClick(c, i)}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
