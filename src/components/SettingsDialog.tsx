@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HexColorPicker } from "react-colorful";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,6 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
-  const [hexInput, setHexInput] = useState(backgroundColor.replace("#", ""));
   const [lastCustom, setLastCustom] = useState<string | null>(null);
 
   const handlePresetClick = (color: string) => {
@@ -40,18 +40,12 @@ export function SettingsDialog({
   };
 
   const handleCustomClick = () => {
-    const current = lastCustom ?? backgroundColor;
-    setHexInput(current.replace("#", ""));
     setEditing(true);
   };
 
-  const handleHexChange = (raw: string) => {
-    setHexInput(raw);
-    const hex = `#${raw}`;
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-      setLastCustom(hex);
-      onBackgroundColorChange(hex);
-    }
+  const handleColorChange = (color: string) => {
+    setLastCustom(color);
+    onBackgroundColorChange(color);
   };
 
   return (
@@ -94,26 +88,31 @@ export function SettingsDialog({
                 onClick={handleCustomClick}
                 title="Personalizado"
               />
-              {editing && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">#</span>
-                  <input
-                    type="text"
-                    value={hexInput}
-                    onChange={(e) => handleHexChange(e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape" || e.key === "Enter") setEditing(false);
-                    }}
-                    onBlur={() => setEditing(false)}
-                    maxLength={6}
-                    className="w-20 rounded border border-border bg-muted px-1.5 py-1 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
-                    placeholder="000000"
-                    autoFocus
-                  />
-                </div>
-              )}
             </div>
+            {editing && (
+              <div className="flex flex-col gap-2 pt-1">
+                <HexColorPicker color={backgroundColor} onChange={handleColorChange} />
+                <input
+                  type="text"
+                  value={backgroundColor.replace("#", "").toUpperCase()}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
+                      if (raw.length === 6) {
+                        handleColorChange(`#${raw}`);
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" || e.key === "Enter") setEditing(false);
+                  }}
+                  onBlur={() => setEditing(false)}
+                  maxLength={7}
+                  className="w-full rounded border border-border bg-muted px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
+                  placeholder="000000"
+                />
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-border" />
@@ -169,7 +168,7 @@ export function SettingsDialog({
                   alwaysShowFloatingControls && "cursor-not-allowed opacity-40",
                 )}
               />
-              <span className={cn("text-xs", alwaysShowFloatingControls ? "text-muted-foreground" : "text-muted-foreground")}>s</span>
+              <span className="text-xs text-muted-foreground">s</span>
             </div>
           </div>
         </div>
