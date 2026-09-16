@@ -29,7 +29,6 @@ export function WelcomeSidebar() {
       await loadPdfFromPath(entry.path);
     } else {
       setErrorPath(entry.path);
-      setHistory(clearHistory());
     }
   };
 
