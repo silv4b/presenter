@@ -54,6 +54,7 @@ interface PresentationContextValue {
   toggleBlackScreen: () => void;
   activeTool: AnnotationTool | null;
   toggleTool: (tool: AnnotationTool) => void;
+  setError: (error: string | null) => void;
 }
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);
@@ -268,6 +269,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       toggleBlackScreen,
       activeTool,
       toggleTool,
+      setError,
     }),
     [
       docPath,
@@ -295,6 +297,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       toggleBlackScreen,
       activeTool,
       toggleTool,
+      setError,
     ],
   );
 
