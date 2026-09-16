@@ -11,19 +11,20 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   onClose: () => void;
   width: number;
+  show: boolean;
 }
 
-export function Sidebar({ onClose, width }: SidebarProps) {
+export function Sidebar({ onClose, width, show }: SidebarProps) {
   return (
     <div
       className={cn(
         "flex shrink-0 overflow-hidden",
         "transition-[width] duration-300 ease-in-out",
       )}
-      style={{ width: width + 6 }}
+      style={{ width: show ? width : 0 }}
     >
       <aside
-        className="flex h-full flex-col gap-4 border-r border-border bg-card p-4"
+        className="flex shrink-0 h-full flex-col gap-4 border-r border-border bg-card p-4"
         style={{ width }}
       >
         <div className="flex items-center justify-between gap-2">

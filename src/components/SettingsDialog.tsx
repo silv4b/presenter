@@ -33,8 +33,13 @@ export function SettingsDialog({
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
   const [lastCustom, setLastCustom] = useState<string | null>(null);
+  const [hexInput, setHexInput] = useState(backgroundColor.replace("#", "").toUpperCase());
   const pickerRef = useRef<HTMLDivElement>(null);
   const customBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setHexInput(backgroundColor.replace("#", "").toUpperCase());
+  }, [backgroundColor]);
 
   useEffect(() => {
     if (!editing) return;
@@ -51,8 +56,12 @@ export function SettingsDialog({
   }, [editing]);
 
   const handlePresetClick = (color: string) => {
-    onBackgroundColorChange(color);
-    setEditing(false);
+    if (color === backgroundColor) {
+      setEditing((prev) => !prev);
+    } else {
+      onBackgroundColorChange(color);
+      setEditing(false);
+    }
   };
 
   const handleCustomClick = () => {
@@ -114,17 +123,20 @@ export function SettingsDialog({
                 <HexColorPicker color={backgroundColor} onChange={handleColorChange} />
                 <input
                   type="text"
-                  value={backgroundColor.replace("#", "").toUpperCase()}
+                  value={hexInput}
                   onChange={(e) => {
-                    const raw = e.target.value;
-                    if (/^[0-9a-fA-F]{0,6}$/.test(raw) && raw.length === 6) {
-                      handleColorChange(`#${raw}`);
+                    const raw = e.target.value.replace("#", "");
+                    if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
+                      setHexInput(raw.toUpperCase());
+                      if (raw.length === 6) {
+                        handleColorChange(`#${raw}`);
+                      }
                     }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Escape" || e.key === "Enter") setEditing(false);
                   }}
-                  maxLength={7}
+                  maxLength={6}
                   className="mt-2 w-full rounded border border-border bg-muted px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
                   placeholder="000000"
                 />
