@@ -90,12 +90,8 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   const [eraserRadius, setEraserRadius] = useState(() => {
     try { const v = localStorage.getItem("presenter:eraserRadius"); return v !== null ? Number(v) : ERASER_RADIUS; } catch { return ERASER_RADIUS; }
   });
-  const [penColor, setPenColor] = useState(() => {
-    try { return localStorage.getItem("presenter:penColor") || PEN_COLOR; } catch { return PEN_COLOR; }
-  });
-  const [highlighterColor, setHighlighterColor] = useState(() => {
-    try { return localStorage.getItem("presenter:highlighterColor") || HIGHLIGHTER_COLOR; } catch { return HIGHLIGHTER_COLOR; }
-  });
+  const [penColor, setPenColor] = useState(PEN_COLOR);
+  const [highlighterColor, setHighlighterColor] = useState(HIGHLIGHTER_COLOR);
 
   const penSizeRef = useRef(PEN_SIZE);
   const highlighterSizeRef = useRef(HIGHLIGHTER_SIZE);
@@ -122,13 +118,6 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   const highlighterColorRef = useRef(HIGHLIGHTER_COLOR);
   useEffect(() => { penColorRef.current = penColor; }, [penColor]);
   useEffect(() => { highlighterColorRef.current = highlighterColor; }, [highlighterColor]);
-
-  useEffect(() => {
-    try { localStorage.setItem("presenter:penColor", penColor); } catch {}
-  }, [penColor]);
-  useEffect(() => {
-    try { localStorage.setItem("presenter:highlighterColor", highlighterColor); } catch {}
-  }, [highlighterColor]);
 
   const activeStrokeRef = useRef<AnnotationStroke | null>(null);
   const activePointsRef = useRef<Point[]>([]);
@@ -386,10 +375,6 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   const resetColors = useCallback(() => {
     setPenColor(PEN_COLOR);
     setHighlighterColor(HIGHLIGHTER_COLOR);
-    try {
-      localStorage.setItem("presenter:penColor", JSON.stringify({ color: PEN_COLOR, activeIndex: 0, customColors: {} }));
-      localStorage.setItem("presenter:highlighterColor", JSON.stringify({ color: HIGHLIGHTER_COLOR, activeIndex: 0, customColors: {} }));
-    } catch {}
   }, []);
 
   const value: PresenterAnnotations = {
