@@ -24,13 +24,14 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 - **Tela preta** — oculta temporariamente o conteúdo do projetor (pausa visual).
 - **Exportar PDF** — gere uma cópia do documento com todas as anotações incorporadas.
 - **Anotações ao vivo** — desenhe sobre os slides durante a apresentação com ferramentas sincronizadas em tempo real com o projetor:
-  - **Caneta** — traço contínuo em vermelho (espessura ajustável via scroll do mouse).
-  - **Marcador de texto** — destaque semi-transparente em amarelo (espessura ajustável via scroll).
+  - **Caneta** — traço contínuo (cor e espessura ajustáveis; espessura via scroll do mouse).
+  - **Marcador de texto** — destaque semi-transparente (cor e espessura ajustáveis).
   - **Laser** — ponteiro luminoso vermelho para chamar atenção.
   - **Borracha** — apague apenas os traços selecionados arrastando sobre eles (raio ajustável via scroll; duplo-clique apaga tudo na página).
   - **Desfazer / Refazer** — Ctrl+Z / Ctrl+Shift+Z para desfazer e refazer anotações (até 50 passos).
   - **Linhas retas** — segure Shift durante o arraste para travar o traço em ângulos de 45° (caneta e marcador).
-- **Botão de reset de tamanhos** — restaura os tamanhos padrão das ferramentas de anotação.
+- **Seleção de cores** — paleta de 6 cores preset com HexColorPicker para cores personalizadas; cores reiniciam ao padrão a cada abertura do app.
+- **Botão de reset de tamanhos** — restaura os tamanhos e cores padrão das ferramentas de anotação.
 - **Confirmação ao fechar** — impede fechamento acidental quando há PDF ou apresentação ativa.
 
 ## Atalhos de teclado
@@ -43,7 +44,9 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `←` / `Page Up` | Slide anterior |
 | `Home` | Primeiro slide |
 | `End` | Último slide |
-| `B` | Alternar tela preta |
+| `B` | Alternar tela preta (durante apresentação) |
+| `Z` | Mostrar/ocultar sidebar esquerda |
+| `X` | Mostrar/ocultar sidebar direita (preview) |
 | `Esc` | Encerrar apresentação ou voltar ao início (com confirmação) |
 | `L` | Ativar/desativar laser |
 | `P` | Ativar/desativar caneta |
@@ -149,7 +152,7 @@ A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (
 3. Clique em **Iniciar (F5)** — as janelas de projeção abrem em tela cheia nos monitores selecionados.
 4. Navegue com as setas, `Espaço` ou pelos controles da sidebar.
 5. Use as ferramentas de anotação (caneta, marcador, laser, borracha) na barra inferior da sidebar.
-6. Use `B` para tela preta e `F5`/`Esc` para encerrar.
+6. Use `Z` e `X` para ocultar/mostrar as sidebars, `B` para tela preta e `F5`/`Esc` para encerrar.
 
 ## CI/CD
 
