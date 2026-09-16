@@ -23,6 +23,8 @@ interface UseKeyboardShortcutsOptions {
   zoomReset: () => void;
   onEscape?: () => void;
   openPdf?: () => void;
+  toggleSidebar?: () => void;
+  togglePreview?: () => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
@@ -92,6 +94,15 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
         case "o": case "O":
           if (!isInput && !o.docLoaded && o.openPdf) {
             e.preventDefault(); o.openPdf();
+          }
+          break;
+        case "b": case "B":
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && o.togglePreview) {
+            e.preventDefault(); o.togglePreview();
+          } else if ((e.ctrlKey || e.metaKey) && o.toggleSidebar) {
+            e.preventDefault(); o.toggleSidebar();
+          } else if (o.isPresenting) {
+            o.toggleBlackScreen();
           }
           break;
       }

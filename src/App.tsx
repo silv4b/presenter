@@ -192,6 +192,8 @@ const [previewWidth, setPreviewWidth] = useState(() => {
       else if (docDataUrl) setCloseDocPending(true);
     },
     openPdf,
+    toggleSidebar: () => setShowSidebar((v) => !v),
+    togglePreview: () => setShowPreview((v) => !v),
   });
 
   const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);
@@ -264,7 +266,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
         </div>
       ) : (
         <>
-          {showSidebar && <Sidebar onClose={() => setShowSidebar(false)} width={sidebarWidth} />}
+          <Sidebar onClose={() => setShowSidebar(false)} width={sidebarWidth} show={showSidebar} />
 
           <main className="relative flex flex-1 overflow-hidden" onWheel={handleWheelZoom}>
             {!showSidebar && (
