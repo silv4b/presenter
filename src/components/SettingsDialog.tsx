@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,22 @@ export function SettingsDialog({
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
   const [lastCustom, setLastCustom] = useState<string | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const customBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    const handleClickOutside = (e: PointerEvent) => {
+      if (
+        pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
+        customBtnRef.current && !customBtnRef.current.contains(e.target as Node)
+      ) {
+        setEditing(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleClickOutside, true);
+    return () => document.removeEventListener("pointerdown", handleClickOutside, true);
+  }, [editing]);
 
   const handlePresetClick = (color: string) => {
     onBackgroundColorChange(color);
@@ -40,7 +56,7 @@ export function SettingsDialog({
   };
 
   const handleCustomClick = () => {
-    setEditing(true);
+    setEditing((prev) => !prev);
   };
 
   const handleColorChange = (color: string) => {
@@ -57,7 +73,7 @@ export function SettingsDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
+          <div className="relative flex flex-col gap-2">
             <span className="text-sm font-medium">Cor de fundo</span>
             <p className="text-xs text-muted-foreground">
               Cor da área atrás dos slides durante a apresentação e no modo de edição.
@@ -79,6 +95,7 @@ export function SettingsDialog({
                 />
               ))}
               <button
+                ref={customBtnRef}
                 type="button"
                 className={cn(
                   "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
@@ -90,25 +107,25 @@ export function SettingsDialog({
               />
             </div>
             {editing && (
-              <div className="flex flex-col gap-2 pt-1">
+              <div
+                ref={pickerRef}
+                className="absolute left-0 top-full z-50 mt-2 rounded-lg border border-border bg-popover p-3 shadow-md"
+              >
                 <HexColorPicker color={backgroundColor} onChange={handleColorChange} />
                 <input
                   type="text"
                   value={backgroundColor.replace("#", "").toUpperCase()}
                   onChange={(e) => {
                     const raw = e.target.value;
-                    if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
-                      if (raw.length === 6) {
-                        handleColorChange(`#${raw}`);
-                      }
+                    if (/^[0-9a-fA-F]{0,6}$/.test(raw) && raw.length === 6) {
+                      handleColorChange(`#${raw}`);
                     }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Escape" || e.key === "Enter") setEditing(false);
                   }}
-                  onBlur={() => setEditing(false)}
                   maxLength={7}
-                  className="w-full rounded border border-border bg-muted px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
+                  className="mt-2 w-full rounded border border-border bg-muted px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
                   placeholder="000000"
                 />
               </div>
