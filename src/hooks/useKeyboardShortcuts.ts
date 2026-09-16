@@ -82,7 +82,20 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           }
           break;
         case "b": case "B":
-          if (o.isPresenting) o.toggleBlackScreen(); break;
+          if (o.isPresenting) {
+            o.toggleBlackScreen();
+          }
+          break;
+        case "z": case "Z":
+          if (!isInput && o.toggleSidebar) {
+            e.preventDefault(); o.toggleSidebar();
+          }
+          break;
+        case "x": case "X":
+          if (!isInput && o.togglePreview) {
+            e.preventDefault(); o.togglePreview();
+          }
+          break;
         case "l": case "L":
           if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("laser"); } break;
         case "p": case "P":
@@ -96,18 +109,9 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
             e.preventDefault(); o.openPdf();
           }
           break;
-        case "b": case "B":
-          if ((e.ctrlKey || e.metaKey) && e.shiftKey && o.togglePreview) {
-            e.preventDefault(); o.togglePreview();
-          } else if ((e.ctrlKey || e.metaKey) && o.toggleSidebar) {
-            e.preventDefault(); o.toggleSidebar();
-          } else if (o.isPresenting) {
-            o.toggleBlackScreen();
-          }
-          break;
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
   }, []);
 }
