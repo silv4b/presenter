@@ -38,6 +38,8 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     penSize,
     highlighterSize,
     eraserRadius,
+    penColor,
+    highlighterColor,
     setPenColor,
     setHighlighterColor,
     resetToolSizes,
@@ -105,8 +107,8 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         >
           <ColorPicker
             key={`${activeTool}-${colorResetKey}`}
-            storageKey={activeTool === "pen" ? "presenter:penColor" : "presenter:highlighterColor"}
-            defaultColor={activeTool === "pen" ? "#ef4444" : "#facc15"}
+            value={activeTool === "pen" ? penColor : highlighterColor}
+            defaultColor={activeTool === "pen" ? "#ef4444" : "#eab308"}
             onChange={(c) => {
               lastPickedRef.current = c;
               if (activeTool === "pen") setPenColor(c);

@@ -14,23 +14,8 @@ const PRESET_COLORS = [
   "#a855f7",
 ];
 
-function readFromStorage(key: string | undefined): { color?: string; activeIndex?: number; customColors?: Record<number, string> } | undefined {
-  if (!key) return undefined;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw || raw.length === 0) return undefined;
-    const parsed = JSON.parse(raw);
-    return parsed;
-  } catch { return undefined; }
-}
-
-function writeToStorage(key: string | undefined, value: { color: string; activeIndex: number; customColors: Record<number, string> }) {
-  if (!key) return;
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-
 interface ColorPickerProps {
-  storageKey?: string;
+  value?: string;
   defaultColor?: string;
   onChange: (color: string) => void;
   onCustomize?: () => void;
@@ -39,16 +24,19 @@ interface ColorPickerProps {
   onEditingChange?: (editing: boolean) => void;
 }
 
-export function ColorPicker({ storageKey, defaultColor = PRESET_COLORS[0], onChange, onCustomize, variant = "default", disabled, onEditingChange }: ColorPickerProps) {
-  const stored = readFromStorage(storageKey);
-  const initialColor = stored?.color ?? defaultColor;
-  const initialActiveIndex = stored?.activeIndex ?? 0;
-  const initialCustomColors = stored?.customColors ?? {};
-
+export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, onCustomize, variant = "default", disabled, onEditingChange }: ColorPickerProps) {
   const [editing, setEditing] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(initialActiveIndex);
+  const initialColor = value ?? defaultColor;
+  const [activeIndex, setActiveIndex] = useState(() => {
+    const idx = PRESET_COLORS.indexOf(initialColor);
+    return idx >= 0 ? idx : 0;
+  });
   const [currentColor, setCurrentColor] = useState(initialColor);
-  const [customColors, setCustomColors] = useState<Record<number, string>>(initialCustomColors);
+  const [customColors, setCustomColors] = useState<Record<number, string>>(() => {
+    if (PRESET_COLORS.indexOf(initialColor) >= 0) return {} as Record<number, string>;
+    return { 0: initialColor };
+  });
+  const [hexInput, setHexInput] = useState("");
   const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
   const pickerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,8 +49,24 @@ export function ColorPicker({ storageKey, defaultColor = PRESET_COLORS[0], onCha
   onEditingChangeRef.current = onEditingChange;
 
   useEffect(() => {
+    if (value !== undefined && value !== currentColor) {
+      setCurrentColor(value);
+      const idx = PRESET_COLORS.indexOf(value);
+      if (idx >= 0) {
+        setActiveIndex(idx);
+      } else {
+        setCustomColors((prev) => ({ ...prev, [activeIndex]: value }));
+      }
+    }
+  }, [value]);
+
+  useEffect(() => {
     onEditingChangeRef.current?.(editing);
   }, [editing]);
+
+  useEffect(() => {
+    setHexInput(currentColor.replace("#", "").toUpperCase());
+  }, [currentColor]);
 
   useEffect(() => {
     if (!editing) return;
@@ -113,25 +117,20 @@ export function ColorPicker({ storageKey, defaultColor = PRESET_COLORS[0], onCha
   }, [editing, clampPickerPosition]);
 
   const handleCircleClick = (c: string, index: number) => {
-    if (index === activeIndex && editing) {
-      setEditing(false);
+    const resolved = customColors[index] ?? c;
+    if (index === activeIndex) {
+      setEditing((prev) => !prev);
     } else {
-      const resolved = customColors[index] ?? c;
       setActiveIndex(index);
       setCurrentColor(resolved);
-      setEditing(true);
-      writeToStorage(storageKey, { color: resolved, activeIndex: index, customColors });
+      setEditing(false);
       onChangeRef.current(resolved);
     }
   };
 
   const handleColorChange = (color: string) => {
     setCurrentColor(color);
-    setCustomColors((prev) => {
-      const next = { ...prev, [activeIndex]: color };
-      writeToStorage(storageKey, { color, activeIndex, customColors: next });
-      return next;
-    });
+    setCustomColors((prev) => ({ ...prev, [activeIndex]: color }));
     onCustomizeRef.current?.();
     onChangeRef.current(color);
   };
@@ -149,18 +148,21 @@ export function ColorPicker({ storageKey, defaultColor = PRESET_COLORS[0], onCha
       <HexColorPicker color={currentColor} onChange={handleColorChange} />
       <input
         type="text"
-        value={currentColor.replace("#", "").toUpperCase()}
+        value={hexInput}
         onChange={(e) => {
-          const raw = e.target.value;
-          if (/^[0-9a-fA-F]{0,6}$/.test(raw) && raw.length === 6) {
-            handleColorChange(`#${raw}`);
+          const raw = e.target.value.replace("#", "");
+          if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
+            setHexInput(raw.toUpperCase());
+            if (raw.length === 6) {
+              handleColorChange(`#${raw}`);
+            }
           }
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
           if (e.key === "Enter") setEditing(false);
         }}
-        maxLength={7}
+        maxLength={6}
         className={cn(
           "mt-2 w-full rounded border px-2 py-1.5 font-mono text-xs outline-none",
           variant === "dark"
