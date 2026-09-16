@@ -32,6 +32,7 @@ export function SettingsDialog({
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
   const [hexInput, setHexInput] = useState(backgroundColor.replace("#", ""));
+  const [lastCustom, setLastCustom] = useState<string | null>(null);
 
   const handlePresetClick = (color: string) => {
     onBackgroundColorChange(color);
@@ -39,7 +40,8 @@ export function SettingsDialog({
   };
 
   const handleCustomClick = () => {
-    setHexInput(backgroundColor.replace("#", ""));
+    const current = lastCustom ?? backgroundColor;
+    setHexInput(current.replace("#", ""));
     setEditing(true);
   };
 
@@ -47,6 +49,7 @@ export function SettingsDialog({
     setHexInput(raw);
     const hex = `#${raw}`;
     if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+      setLastCustom(hex);
       onBackgroundColorChange(hex);
     }
   };
@@ -87,7 +90,7 @@ export function SettingsDialog({
                   "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
                   isPreset ? "border-border" : "border-foreground scale-110",
                 )}
-                style={{ backgroundColor: isPreset ? "#3f3f46" : backgroundColor }}
+                style={{ backgroundColor: isPreset ? (lastCustom ?? "#3f3f46") : backgroundColor }}
                 onClick={handleCustomClick}
                 title="Personalizado"
               />
