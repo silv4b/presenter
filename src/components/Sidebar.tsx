@@ -5,13 +5,38 @@ import { MonitorSelector } from "@/components/sidebar/MonitorSelector";
 import { PresentationControls } from "@/components/sidebar/PresentationControls";
 import { SlideNavigation } from "@/components/sidebar/SlideNavigation";
 import { AnnotationToolbar } from "@/components/sidebar/AnnotationToolbar";
+import { PanelLeftClose } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose: () => void;
+  width: number;
+}
+
+export function Sidebar({ onClose, width }: SidebarProps) {
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col gap-4 border-r border-border bg-card p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold">Presenter</span>
-      </div>
+    <div
+      className={cn(
+        "flex shrink-0 overflow-hidden",
+        "transition-[width] duration-300 ease-in-out",
+      )}
+      style={{ width: width + 6 }}
+    >
+      <aside
+        className="flex h-full flex-col gap-4 border-r border-border bg-card p-4"
+        style={{ width }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Presenter</span>
+          <button
+            onClick={onClose}
+            aria-label="Ocultar sidebar"
+            title="Ocultar sidebar (B)"
+            className="size-7 rounded-md hover:bg-accent transition-colors"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
+        </div>
 
       <FileControls />
       <Separator />
@@ -26,5 +51,6 @@ export function Sidebar() {
         <Timer />
       </div>
     </aside>
-  );
+  </div>
+);
 }
