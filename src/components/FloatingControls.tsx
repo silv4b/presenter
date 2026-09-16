@@ -58,7 +58,6 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     ["eraser", Eraser, "Borracha (E)"],
   ];
 
-  const showColorPicker = activeTool === "pen" || activeTool === "highlighter";
   const lastPickedRef = useRef<string | null>(null);
   const [colorResetKey, setColorResetKey] = useState(0);
 
@@ -101,26 +100,20 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         )}
       >
         <div
-          className={cn(
-            "overflow-hidden transition-all duration-300 ease-in-out",
-            showColorPicker ? "w-44 h-8 opacity-100" : "w-0 h-8 opacity-0",
-          )}
+          className="flex h-8 items-center"
         >
-          <div className="flex h-8 items-center px-1.5">
-            <ColorPicker
-              resetKey={colorResetKey}
-              onChange={(c) => {
-                lastPickedRef.current = c;
-                if (activeTool === "pen") setPenColor(c);
-                else setHighlighterColor(c);
-              }}
-              variant="dark"
-            />
-          </div>
+          <ColorPicker
+            resetKey={colorResetKey}
+            onChange={(c) => {
+              lastPickedRef.current = c;
+              if (activeTool === "pen") setPenColor(c);
+              else if (activeTool === "highlighter") setHighlighterColor(c);
+            }}
+            variant="dark"
+            disabled={activeTool !== "pen" && activeTool !== "highlighter"}
+          />
         </div>
-        {showColorPicker && (
-          <div className="mx-1 h-5 w-px bg-white/20" />
-        )}
+        <div className="mx-1 h-5 w-px bg-white/20" />
         {tools.map(([tool, Icon, label]) => (
           <Button key={tool} size="icon" variant="ghost" className={toolClass(tool)} onClick={() => toggleTool(tool)} title={label}>
             <Icon className="size-4" />
