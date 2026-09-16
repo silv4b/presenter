@@ -14,12 +14,8 @@ import { PreviewPanel } from "@/components/PreviewPanel";
 import { PanelRightOpen } from "lucide-react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAutoHide } from "@/hooks/useAutoHide";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useSettings } from "@/hooks/useSettings";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,8 +56,9 @@ function PresenterShell() {
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
+  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout } = useSettings();
 
-  const MIN_PREVIEW = 240;
+  const MIN_PREVIEW = 320;
   const MAX_PREVIEW = 512;
   const [previewWidth, setPreviewWidth] = useState(() => {
     const saved = Number(localStorage.getItem(PREVIEW_WIDTH_KEY));
@@ -187,17 +184,24 @@ function PresenterShell() {
     openPdf,
   });
 
-  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible } = useAutoHide(3000);
+  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);
 
   useEffect(() => {
-    if (isPresenting && isSingleMonitor) {
+    if (alwaysShowFloatingControls) {
+      clearAutoHide();
+      setControlsVisible(true);
+    } else if (isPresenting && isSingleMonitor) {
       showControls();
     } else {
       setControlsVisible(true);
     }
-  }, [isPresenting, isSingleMonitor, showControls, setControlsVisible]);
+  }, [isPresenting, isSingleMonitor, showControls, setControlsVisible, alwaysShowFloatingControls, clearAutoHide]);
 
   const fullscreenMode = isPresenting && isSingleMonitor && docDataUrl;
+
+  const handleMouseMove = useCallback(() => {
+    if (!alwaysShowFloatingControls) showControls();
+  }, [alwaysShowFloatingControls, showControls]);
 
   const handleDialogArrowNav = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
@@ -218,8 +222,9 @@ function PresenterShell() {
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {fullscreenMode ? (
         <div
-          className="relative h-full w-full bg-black"
-          onMouseMove={showControls}
+          className="relative h-full w-full"
+          style={{ backgroundColor }}
+          onMouseMove={handleMouseMove}
           onWheel={handleWheelZoom}
         >
           <Document
@@ -236,6 +241,7 @@ function PresenterShell() {
               zoom={zoom}
               className="h-full"
               pdfCanvasRef={pdfCanvasRef}
+              backgroundColor={backgroundColor}
               overlay={({ scale }) => (
                 <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
               )}
@@ -244,7 +250,7 @@ function PresenterShell() {
 
           {blackScreen && <div className="absolute inset-0 z-10 bg-black" />}
 
-          <FloatingControls visible={controlsVisible} onStopPresentation={() => void stopPresentation()} />
+          <FloatingControls visible={controlsVisible} onStopPresentation={() => setConfirmExitOpen(true)} />
         </div>
       ) : (
         <>
@@ -268,6 +274,7 @@ function PresenterShell() {
                       zoom={zoom}
                       className="h-full"
                       pdfCanvasRef={pdfCanvasRef}
+                      backgroundColor={backgroundColor}
                       overlay={({ scale }) => (
                         <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
                       )}
@@ -310,16 +317,16 @@ function PresenterShell() {
         </>
       )}
 
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configurações</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Em breve — configurações do aplicativo.
-          </p>
-        </DialogContent>
-      </Dialog>
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        backgroundColor={backgroundColor}
+        onBackgroundColorChange={setBackgroundColor}
+        alwaysShowFloatingControls={alwaysShowFloatingControls}
+        onAlwaysShowFloatingControlsChange={setAlwaysShowFloatingControls}
+        floatingControlsTimeout={floatingControlsTimeout}
+        onFloatingControlsTimeoutChange={setFloatingControlsTimeout}
+      />
 
       <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
         <AlertDialogContent onKeyDown={handleDialogArrowNav}>
