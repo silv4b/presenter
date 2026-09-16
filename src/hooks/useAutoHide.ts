@@ -4,17 +4,22 @@ export function useAutoHide(delay = 3000) {
   const [visible, setVisible] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const show = useCallback(() => {
-    setVisible(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setVisible(false), delay);
-  }, [delay]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+  const clear = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
   }, []);
 
-  return { visible, show, setVisible };
+  const show = useCallback(() => {
+    setVisible(true);
+    clear();
+    timerRef.current = setTimeout(() => setVisible(false), delay);
+  }, [delay, clear]);
+
+  useEffect(() => {
+    return () => clear();
+  }, [clear]);
+
+  return { visible, show, setVisible, clear };
 }

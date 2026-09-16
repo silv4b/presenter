@@ -14,9 +14,10 @@ interface PdfStageProps {
   className?: string;
   overlay?: (metrics: StageMetrics) => ReactNode;
   pdfCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
+  backgroundColor?: string;
 }
 
-export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, pdfCanvasRef }: PdfStageProps) {
+export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, pdfCanvasRef, backgroundColor = "#000000" }: PdfStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [container, setContainer] = useState({ w: 0, h: 0 });
   const [pageSize, setPageSize] = useState<{ w: number; h: number } | null>(null);
@@ -112,11 +113,12 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
     <div
       ref={containerRef}
       className={cn(
-        "relative flex h-full w-full items-center justify-center overflow-hidden bg-black",
+        "relative flex h-full w-full items-center justify-center overflow-hidden",
         canPan && "cursor-grab",
         panningRef.current && "cursor-grabbing",
         className,
       )}
+      style={{ backgroundColor }}
       onMouseDown={handleMouseDown}
     >
       <div
@@ -158,7 +160,7 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
                     );
                   }
                 }}
-                className="shadow-2xl shadow-black/60"
+                className="border border-border"
               />
               {isCurrent && metrics && overlay
                 ? overlay(metrics)

@@ -16,6 +16,7 @@ export default function Viewscreen() {
   const [page, setPage] = useState(1);
   const [black, setBlack] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bgColor, setBgColor] = useState(() => localStorage.getItem("presenter.backgroundColor") ?? "#000000");
   const { strokesByPage, laser } = useViewscreenAnnotations();
 
   useEffect(() => {
@@ -59,8 +60,18 @@ export default function Viewscreen() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "presenter.backgroundColor" && e.newValue) {
+        setBgColor(e.newValue);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <div className="relative h-screen w-screen overflow-hidden" style={{ backgroundColor: bgColor }}>
       {dataUrl ? (
         <Document
           file={dataUrl}
