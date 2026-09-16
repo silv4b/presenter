@@ -97,11 +97,24 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
 
   const selectMonitor = useCallback((id: string) => {
     setSelectedMonitors((prev) => {
-      const next = prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id];
+      const monitor = monitors.find((m) => m.id === id);
+      let next: string[];
+      if (monitor?.primary && !prev.includes(id)) {
+        next = [id];
+      } else {
+        next = prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id];
+      }
       setMonitorConfig(next).catch(() => {});
       return next;
     });
-  }, []);
+  }, [monitors]);
+
+  const isSingleMonitor = useMemo(() => {
+    if (selectedMonitors.length === 0) {
+      return monitors.length <= 1;
+    }
+    return selectedMonitors.every((id) => monitors.find((m) => m.id === id)?.primary);
+  }, [selectedMonitors, monitors]);
 
   const openPdf = useCallback(async () => {
     const selected = await open({
@@ -137,7 +150,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
 
   const closeDocument = useCallback(() => {
     if (isPresenting) {
-      if (monitors.length <= 1) {
+      if (isSingleMonitor) {
         getCurrentWindow().setFullscreen(false).catch(() => {});
       } else {
         closeProjection().catch(() => {});
@@ -151,7 +164,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setCurrentPage(1);
     setError(null);
     emit(EVENT_ANNOTATION_CLEAR).catch(() => {});
-  }, [isPresenting, monitors.length]);
+  }, [isPresenting, isSingleMonitor]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -175,8 +188,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   }, [currentPage, goToPage]);
 
   const startPresentation = useCallback(async () => {
-    const singleMonitor = monitors.length <= 1;
-    if (singleMonitor) {
+    if (isSingleMonitor) {
       try {
         await getCurrentWindow().setFullscreen(true);
       } catch (e) {
@@ -197,11 +209,10 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       () => {},
     );
     emit(EVENT_BLACK_SCREEN, { black: blackScreen }).catch(() => {});
-  }, [currentPage, blackScreen, selectedMonitors, monitors]);
+  }, [currentPage, blackScreen, selectedMonitors, monitors, isSingleMonitor]);
 
   const stopPresentation = useCallback(async () => {
-    const singleMonitor = monitors.length <= 1;
-    if (singleMonitor) {
+    if (isSingleMonitor) {
       try {
         await getCurrentWindow().setFullscreen(false);
       } catch (e) {
@@ -215,7 +226,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       }
     }
     setIsPresenting(false);
-  }, [monitors.length]);
+  }, [isSingleMonitor]);
 
   const toggleBlackScreen = useCallback(() => {
     setBlackScreen((prev) => {
@@ -228,8 +239,6 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const toggleTool = useCallback((tool: AnnotationTool) => {
     setActiveTool((prev) => (prev === tool ? null : tool));
   }, []);
-
-  const isSingleMonitor = monitors.length <= 1;
 
   const value = useMemo<PresentationContextValue>(
     () => ({
