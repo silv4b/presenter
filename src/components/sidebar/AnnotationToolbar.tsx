@@ -61,7 +61,7 @@ export function AnnotationToolbar() {
     <div className="flex flex-col items-center gap-2">
       <div className={cn("relative flex items-end gap-2 pb-1", !showColorPicker && "invisible h-0 overflow-hidden")}>
         <ColorPicker
-          key={`${activeTool}-${colorResetKey}`}
+          key={colorResetKey}
           value={activeTool === "pen" ? penColor : highlighterColor}
           defaultColor={activeTool === "pen" ? "#ef4444" : "#eab308"}
           onChange={(c) => {

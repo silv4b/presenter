@@ -47,6 +47,8 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
   onCustomizeRef.current = onCustomize;
   const onEditingChangeRef = useRef(onEditingChange);
   onEditingChangeRef.current = onEditingChange;
+  const customColorsRef = useRef(customColors);
+  customColorsRef.current = customColors;
 
   useEffect(() => {
     if (value !== undefined && value !== currentColor) {
@@ -55,7 +57,12 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
       if (idx >= 0) {
         setActiveIndex(idx);
       } else {
-        setCustomColors((prev) => ({ ...prev, [activeIndex]: value }));
+        const existingKey = Object.keys(customColorsRef.current).find(
+          (k) => customColorsRef.current[Number(k)] === value,
+        );
+        const targetIdx = existingKey !== undefined ? Number(existingKey) : 0;
+        setActiveIndex(targetIdx);
+        setCustomColors((prev) => ({ ...prev, [targetIdx]: value }));
       }
     }
   }, [value]);

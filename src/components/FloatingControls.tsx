@@ -106,7 +106,7 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
           className="relative flex h-8 items-center ml-2 mr-1"
         >
           <ColorPicker
-            key={`${activeTool}-${colorResetKey}`}
+            key={colorResetKey}
             value={activeTool === "pen" ? penColor : highlighterColor}
             defaultColor={activeTool === "pen" ? "#ef4444" : "#eab308"}
             onChange={(c) => {
