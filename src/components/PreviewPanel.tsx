@@ -3,6 +3,7 @@ import { usePresenterAnnotations } from "@/state/annotations";
 import { exportFullPdf } from "@/lib/exportPdf";
 import { Button } from "@/components/ui/button";
 import { NextPreview } from "@/components/NextPreview";
+import { PresenterNotes } from "@/components/PresenterNotes";
 import { PanelRightClose, Settings, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ export function PreviewPanel({
   onHide,
   onOpenSettings,
 }: PreviewPanelProps) {
-  const { docDataUrl, currentPage, numPages, nextPage } = usePresentation();
+  const { docDataUrl, currentPage, numPages, nextPage, notesByPage } = usePresentation();
   const { strokesByPage } = usePresenterAnnotations();
 
   const handleExport = () => {
@@ -71,6 +72,14 @@ export function PreviewPanel({
           <Download className="size-3.5" />
           Exportar PDF
         </Button>
+        {Object.keys(notesByPage).length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Notas
+            </span>
+            <PresenterNotes notes={notesByPage} currentPage={currentPage} />
+          </div>
+        )}
         <div className="mt-auto flex justify-end">
           <Button size="icon" variant="ghost" onClick={onOpenSettings} aria-label="Configurações" title="Configurações">
             <Settings className="size-4" />
