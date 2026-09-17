@@ -8,10 +8,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePresentation } from "@/state/presentation";
-import { getHistory, clearHistory, type HistoryEntry } from "@/lib/fileHistory";
+import { getHistory, clearHistory, removeFromHistory, type HistoryEntry } from "@/lib/fileHistory";
 import { fileExists } from "@/lib/pdf";
-import { FileText, Trash2, Clock } from "lucide-react";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { FileText, Trash2, Clock, MoreVertical, FolderOpen } from "lucide-react";
 
 export function WelcomeSidebar() {
   const { loadPdfFromPath } = usePresentation();
@@ -29,7 +36,6 @@ export function WelcomeSidebar() {
       await loadPdfFromPath(entry.path);
     } else {
       setErrorPath(entry.path);
-      setHistory(clearHistory());
     }
   };
 
@@ -60,19 +66,47 @@ export function WelcomeSidebar() {
             </p>
           ) : (
             history.map((entry) => (
-              <button
+              <div
                 key={entry.path}
-                onClick={() => handleClick(entry)}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                className="group flex items-center gap-2 rounded-md py-1.5 text-left text-sm transition-colors hover:bg-muted"
               >
-                <FileText className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{entry.name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">
-                    {entry.path}
-                  </p>
-                </div>
-              </button>
+                <button
+                  onClick={() => handleClick(entry)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate font-medium">{entry.name}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {entry.path}
+                    </p>
+                  </div>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-6 shrink-0"
+                    >
+                      <MoreVertical className="size-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-46 flex flex-col gap-1">
+                    <DropdownMenuItem onClick={() => revealItemInDir(entry.path)}>
+                      <FolderOpen className="size-3.5" />
+                      Abrir local do arquivo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setHistory(removeFromHistory(entry.path))}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remover do histórico
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ))
           )}
         </div>

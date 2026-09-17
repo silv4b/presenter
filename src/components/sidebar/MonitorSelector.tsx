@@ -51,16 +51,20 @@ export function MonitorSelector() {
         <div className="flex flex-col gap-1">
           {monitors.map((m, i) => {
             const checked = selectedMonitors.includes(m.id);
+            const primaryChecked = selectedMonitors.some((id) => monitors.find((mm) => mm.id === id)?.primary);
+            const disabled = primaryChecked && !m.primary;
             return (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => selectMonitor(m.id)}
+                disabled={disabled}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
                   checked
                     ? "bg-primary/10 text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
                 )}
               >
                 <div

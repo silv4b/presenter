@@ -11,15 +11,11 @@ import { Welcome } from "@/components/Welcome";
 import { AnnotationLayerContainer } from "@/components/AnnotationLayerContainer";
 import { FloatingControls } from "@/components/FloatingControls";
 import { PreviewPanel } from "@/components/PreviewPanel";
-import { PanelRightOpen } from "lucide-react";
+import { PanelRightOpen, PanelLeftOpen } from "lucide-react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAutoHide } from "@/hooks/useAutoHide";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useSettings } from "@/hooks/useSettings";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +30,7 @@ import {
 const PREVIEW_WIDTH_KEY = "presenter.previewWidth";
 const PREVIEW_VISIBLE_KEY = "presenter.previewVisible";
 const CAROUSEL_HEIGHT_KEY = "presenter.carouselHeight";
+const SIDEBAR_VISIBLE_KEY = "presenter.sidebarVisible";
 
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
@@ -47,6 +44,8 @@ function PresenterShell() {
     isPresenting,
     isSingleMonitor,
     blackScreen,
+    error,
+    setError,
     toggleTool,
     setNumPages,
     nextPage,
@@ -60,18 +59,25 @@ function PresenterShell() {
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
+  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout } = useSettings();
 
-  const MIN_PREVIEW = 240;
-  const MAX_PREVIEW = 512;
-  const [previewWidth, setPreviewWidth] = useState(() => {
+const MIN_PREVIEW = 320;
+const MAX_PREVIEW = 512;
+const SIDEBAR_WIDTH = 320; // w-80 = 320px
+const [previewWidth, setPreviewWidth] = useState(() => {
     const saved = Number(localStorage.getItem(PREVIEW_WIDTH_KEY));
     if (Number.isFinite(saved)) {
       return Math.min(MAX_PREVIEW, Math.max(MIN_PREVIEW, saved));
     }
     return MAX_PREVIEW;
   });
+  const [sidebarWidth] = useState(SIDEBAR_WIDTH);
   const [showPreview, setShowPreview] = useState(() => {
     const saved = localStorage.getItem(PREVIEW_VISIBLE_KEY);
+    return saved !== "false";
+  });
+  const [showSidebar, setShowSidebar] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_VISIBLE_KEY);
     return saved !== "false";
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -97,6 +103,7 @@ function PresenterShell() {
 
   useEffect(() => { localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth)); }, [previewWidth]);
   useEffect(() => { localStorage.setItem(PREVIEW_VISIBLE_KEY, String(showPreview)); }, [showPreview]);
+  useEffect(() => { localStorage.setItem(SIDEBAR_VISIBLE_KEY, String(showSidebar)); }, [showSidebar]);
   useEffect(() => { localStorage.setItem(CAROUSEL_HEIGHT_KEY, String(carouselHeight)); }, [carouselHeight]);
 
   const handleZoom = useCallback((delta: number) => {
@@ -185,19 +192,28 @@ function PresenterShell() {
       else if (docDataUrl) setCloseDocPending(true);
     },
     openPdf,
+    toggleSidebar: () => setShowSidebar((v) => !v),
+    togglePreview: () => setShowPreview((v) => !v),
   });
 
-  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible } = useAutoHide(3000);
+  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);
 
   useEffect(() => {
-    if (isPresenting && isSingleMonitor) {
+    if (alwaysShowFloatingControls) {
+      clearAutoHide();
+      setControlsVisible(true);
+    } else if (isPresenting && isSingleMonitor) {
       showControls();
     } else {
       setControlsVisible(true);
     }
-  }, [isPresenting, isSingleMonitor, showControls, setControlsVisible]);
+  }, [isPresenting, isSingleMonitor, showControls, setControlsVisible, alwaysShowFloatingControls, clearAutoHide]);
 
   const fullscreenMode = isPresenting && isSingleMonitor && docDataUrl;
+
+  const handleMouseMove = useCallback(() => {
+    if (!alwaysShowFloatingControls) showControls();
+  }, [alwaysShowFloatingControls, showControls]);
 
   const handleDialogArrowNav = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
@@ -218,8 +234,9 @@ function PresenterShell() {
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {fullscreenMode ? (
         <div
-          className="relative h-full w-full bg-black"
-          onMouseMove={showControls}
+          className="relative h-full w-full"
+          style={{ backgroundColor }}
+          onMouseMove={handleMouseMove}
           onWheel={handleWheelZoom}
         >
           <Document
@@ -236,6 +253,7 @@ function PresenterShell() {
               zoom={zoom}
               className="h-full"
               pdfCanvasRef={pdfCanvasRef}
+              backgroundColor={backgroundColor}
               overlay={({ scale }) => (
                 <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
               )}
@@ -244,18 +262,29 @@ function PresenterShell() {
 
           {blackScreen && <div className="absolute inset-0 z-10 bg-black" />}
 
-          <FloatingControls visible={controlsVisible} onStopPresentation={() => void stopPresentation()} />
+          <FloatingControls visible={controlsVisible} onStopPresentation={() => setConfirmExitOpen(true)} />
         </div>
       ) : (
         <>
-          <Sidebar />
+          <Sidebar onClose={() => setShowSidebar(false)} width={sidebarWidth} show={showSidebar} />
 
           <main className="relative flex flex-1 overflow-hidden" onWheel={handleWheelZoom}>
+            {!showSidebar && (
+              <button
+                onClick={() => setShowSidebar(true)}
+                aria-label="Mostrar sidebar"
+                title="Mostrar sidebar (B)"
+                className="absolute left-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent"
+              >
+                <PanelLeftOpen className="size-4" />
+              </button>
+            )}
             {docDataUrl ? (
               <>
                 <Document
                   file={docDataUrl}
                   onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                  onLoadError={(err) => { console.error("PDF load error:", err); setError(err.message); }}
                   error={<p className="p-8 text-sm text-destructive">Falha ao carregar PDF.</p>}
                   loading={<p className="p-8 text-sm text-muted-foreground">Carregando documento…</p>}
                   suspense={false}
@@ -268,6 +297,7 @@ function PresenterShell() {
                       zoom={zoom}
                       className="h-full"
                       pdfCanvasRef={pdfCanvasRef}
+                      backgroundColor={backgroundColor}
                       overlay={({ scale }) => (
                         <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
                       )}
@@ -304,22 +334,29 @@ function PresenterShell() {
                 )}
               </>
             ) : (
-              <Welcome onOpenSettings={() => setSettingsOpen(true)} />
+              <>
+                {error && (
+                  <div className="flex h-full items-center justify-center p-8 text-center">
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                )}
+                <Welcome onOpenSettings={() => setSettingsOpen(true)} />
+              </>
             )}
           </main>
         </>
       )}
 
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configurações</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Em breve — configurações do aplicativo.
-          </p>
-        </DialogContent>
-      </Dialog>
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        backgroundColor={backgroundColor}
+        onBackgroundColorChange={setBackgroundColor}
+        alwaysShowFloatingControls={alwaysShowFloatingControls}
+        onAlwaysShowFloatingControlsChange={setAlwaysShowFloatingControls}
+        floatingControlsTimeout={floatingControlsTimeout}
+        onFloatingControlsTimeoutChange={setFloatingControlsTimeout}
+      />
 
       <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
         <AlertDialogContent onKeyDown={handleDialogArrowNav}>

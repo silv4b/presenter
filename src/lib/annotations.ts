@@ -33,7 +33,7 @@ export const PEN_MIN = 1;
 export const PEN_MAX = 24;
 export const PEN_STEP = 0.5;
 
-export const HIGHLIGHTER_COLOR = "#facc15";
+export const HIGHLIGHTER_COLOR = "#eab308";
 export const HIGHLIGHTER_SIZE = 18;
 export const HIGHLIGHTER_MIN = 6;
 export const HIGHLIGHTER_MAX = 48;

@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { HexColorPicker } from "react-colorful";
 import { cn } from "@/lib/utils";
+
+const PICKER_WIDTH = 222;
+const PICKER_MARGIN = 8;
 
 const PRESET_COLORS = [
   "#ef4444",
@@ -11,42 +15,73 @@ const PRESET_COLORS = [
 ];
 
 interface ColorPickerProps {
-  resetKey?: number;
+  value?: string;
+  defaultColor?: string;
   onChange: (color: string) => void;
+  onCustomize?: () => void;
   variant?: "default" | "dark";
+  disabled?: boolean;
+  onEditingChange?: (editing: boolean) => void;
 }
 
-export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: ColorPickerProps) {
+export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, onCustomize, variant = "default", disabled, onEditingChange }: ColorPickerProps) {
   const [editing, setEditing] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const initialColor = value ?? defaultColor;
+  const [activeIndex, setActiveIndex] = useState(() => {
+    const idx = PRESET_COLORS.indexOf(initialColor);
+    return idx >= 0 ? idx : 0;
+  });
+  const [currentColor, setCurrentColor] = useState(initialColor);
+  const [customColors, setCustomColors] = useState<Record<number, string>>(() => {
+    if (PRESET_COLORS.indexOf(initialColor) >= 0) return {} as Record<number, string>;
+    return { 0: initialColor };
+  });
   const [hexInput, setHexInput] = useState("");
-  const [customColors, setCustomColors] = useState<Record<number, string>>({});
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+  const pickerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const circlesRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const prevResetKeyRef = useRef(resetKey);
+  const onCustomizeRef = useRef(onCustomize);
+  onCustomizeRef.current = onCustomize;
+  const onEditingChangeRef = useRef(onEditingChange);
+  onEditingChangeRef.current = onEditingChange;
+  const customColorsRef = useRef(customColors);
+  customColorsRef.current = customColors;
 
   useEffect(() => {
-    if (resetKey !== prevResetKeyRef.current) {
-      prevResetKeyRef.current = resetKey;
-      setActiveIndex(0);
-      setCustomColors({});
-      setEditing(false);
+    if (value !== undefined && value !== currentColor) {
+      setCurrentColor(value);
+      const idx = PRESET_COLORS.indexOf(value);
+      if (idx >= 0) {
+        setActiveIndex(idx);
+      } else {
+        const existingKey = Object.keys(customColorsRef.current).find(
+          (k) => customColorsRef.current[Number(k)] === value,
+        );
+        const targetIdx = existingKey !== undefined ? Number(existingKey) : 0;
+        setActiveIndex(targetIdx);
+        setCustomColors((prev) => ({ ...prev, [targetIdx]: value }));
+      }
     }
-  }, [resetKey]);
+  }, [value]);
 
   useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
+    onEditingChangeRef.current?.(editing);
   }, [editing]);
+
+  useEffect(() => {
+    setHexInput(currentColor.replace("#", "").toUpperCase());
+  }, [currentColor]);
 
   useEffect(() => {
     if (!editing) return;
     const handlePointerDown = (e: PointerEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current && !containerRef.current.contains(e.target as Node) &&
+        pickerRef.current && !pickerRef.current.contains(e.target as Node)
+      ) {
         setEditing(false);
       }
     };
@@ -54,73 +89,147 @@ export function ColorPicker({ resetKey = 0, onChange, variant = "default" }: Col
     return () => document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [editing]);
 
-  const handleHexChange = (raw: string) => {
-    setHexInput(raw);
-    const hex = `#${raw}`;
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-      setCustomColors((prev) => ({ ...prev, [activeIndex]: hex }));
-      onChangeRef.current(hex);
+  const clampPickerPosition = useCallback(() => {
+    if (!circlesRef.current) return;
+    const rect = circlesRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const halfPicker = PICKER_WIDTH / 2;
+    const margin = PICKER_MARGIN;
+
+    let left = centerX - halfPicker - 700;
+    if (left < margin) left = margin;
+    if (left + PICKER_WIDTH > window.innerWidth - margin) {
+      left = window.innerWidth - margin - PICKER_WIDTH;
     }
-  };
+
+    const top = rect.bottom + 10;
+
+    setPickerStyle({ position: "fixed", left, top, width: PICKER_WIDTH, zIndex: 50 });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (editing) clampPickerPosition();
+  }, [editing, clampPickerPosition]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const handleResize = () => clampPickerPosition();
+    const handleScroll = () => clampPickerPosition();
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [editing, clampPickerPosition]);
 
   const handleCircleClick = (c: string, index: number) => {
-    if (index === activeIndex && editing) {
-      setEditing(false);
+    const resolved = customColors[index] ?? c;
+    if (index === activeIndex) {
+      setEditing((prev) => !prev);
     } else {
-      const resolved = customColors[index] ?? c;
       setActiveIndex(index);
-      setHexInput(resolved.replace("#", ""));
-      setEditing(true);
+      setCurrentColor(resolved);
+      setEditing(false);
       onChangeRef.current(resolved);
     }
   };
 
-  return (
-    <div ref={containerRef} className="flex items-center gap-2">
-      <div className="flex flex-col items-center gap-3">
-        {editing && (
-          <div className="flex items-center gap-1">
-            <span className={cn("text-[18px]", variant === "dark" ? "text-white/60" : "text-muted-foreground")}>#</span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={hexInput}
-              onChange={(e) => handleHexChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape" || e.key === "Enter") setEditing(false);
-              }}
-              maxLength={6}
-              className={cn(
-                "w-20 rounded border px-1.5 py-1 font-mono outline-none",
-                variant === "dark"
-                  ? "border-white/20 bg-white/10 text-white placeholder-white/40"
-                  : "border-border bg-muted text-foreground placeholder-muted-foreground",
-              )}
-              placeholder="000000"
-            />
-          </div>
+  const handleColorChange = (color: string) => {
+    setCurrentColor(color);
+    setCustomColors((prev) => ({ ...prev, [activeIndex]: color }));
+    onCustomizeRef.current?.();
+    onChangeRef.current(color);
+  };
+
+  const picker = (
+    <div
+      ref={pickerRef}
+      className={cn(
+        "z-50 rounded-lg border p-3 shadow-md",
+        variant === "dark" ? "border-white/20 bg-black/90" : "border-border bg-popover",
+      )}
+      style={pickerStyle}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <HexColorPicker color={currentColor} onChange={handleColorChange} />
+      <input
+        type="text"
+        value={hexInput}
+        onChange={(e) => {
+          const raw = e.target.value.replace("#", "");
+          if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
+            setHexInput(raw.toUpperCase());
+            if (raw.length === 6) {
+              handleColorChange(`#${raw}`);
+            }
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
+          if (e.key === "Enter") setEditing(false);
+        }}
+        maxLength={6}
+        className={cn(
+          "mt-2 w-full rounded border px-2 py-1.5 font-mono text-xs outline-none",
+          variant === "dark"
+            ? "border-white/20 bg-white/10 text-white placeholder-white/40"
+            : "border-border bg-muted text-foreground placeholder-muted-foreground",
         )}
-        <div className="flex items-center gap-2">
+        placeholder="000000"
+      />
+    </div>
+  );
+
+  if (variant === "dark") {
+    return (
+      <div ref={containerRef} className={cn("relative flex items-center gap-2", disabled && "opacity-30 pointer-events-none")}>
+        <div ref={circlesRef} className="flex shrink-0 items-center gap-2">
           {PRESET_COLORS.map((c, i) => {
-            const isActive = i === activeIndex;
             const bg = customColors[i] ?? c;
+            const isActive = i === activeIndex;
             return (
               <button
                 key={c}
                 type="button"
                 className={cn(
                   "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
-                  variant === "dark" ? "border-white/30" : "border-border",
-                  isActive && (variant === "dark" ? "border-white scale-110" : "border-foreground scale-110"),
+                  "border-white/30",
+                  isActive && "border-white scale-110",
                 )}
                 style={{ backgroundColor: bg }}
-                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => handleCircleClick(c, i)}
               />
             );
           })}
         </div>
+        {editing && picker}
       </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className={cn("relative flex flex-col items-center gap-2", disabled && "opacity-30 pointer-events-none")}>
+      <div ref={circlesRef} className="flex items-center gap-2">
+        {PRESET_COLORS.map((c, i) => {
+          const bg = customColors[i] ?? c;
+          const isActive = i === activeIndex;
+          return (
+            <button
+              key={c}
+              type="button"
+              className={cn(
+                "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                "border-border",
+                isActive && "border-foreground scale-110",
+              )}
+              style={{ backgroundColor: bg }}
+              onClick={() => handleCircleClick(c, i)}
+            />
+          );
+        })}
+      </div>
+      {editing && picker}
     </div>
   );
 }

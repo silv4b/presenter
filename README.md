@@ -11,7 +11,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 ## Recursos
 
 - **Abertura de PDF** — selecione qualquer arquivo `.pdf` do computador, arraste e solte na tela inicial ou use o atalho `O`.
-- **Histórico de arquivos** — sidebar na tela inicial exibe os últimos PDFs abertos; clique para reabrir (com verificação de existência e dialog de erro se o arquivo não for encontrado).
+- **Histórico de arquivos** — sidebar na tela inicial exibe os últimos PDFs abertos; clique para reabrir (com verificação de existência e dialog de erro); menu com opções de abrir local do arquivo e remover do histórico.
 - **Renderização em alta resolução** — cada página é desenhada em `<canvas>` via PDF.js (react-pdf), redimensionando-se automaticamente ao tamanho da janela.
 - **Modo apresentador multi-janela** — a janela principal controla janelas `viewscreen-{idx}` exibidas em tela cheia nos monitores selecionados.
 - **Modo tela cheia com monitor único** — quando há apenas um monitor, a janela principal entra em tela cheia com controles flutuantes.
@@ -24,14 +24,17 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 - **Tela preta** — oculta temporariamente o conteúdo do projetor (pausa visual).
 - **Exportar PDF** — gere uma cópia do documento com todas as anotações incorporadas.
 - **Anotações ao vivo** — desenhe sobre os slides durante a apresentação com ferramentas sincronizadas em tempo real com o projetor:
-  - **Caneta** — traço contínuo em vermelho (espessura ajustável via scroll do mouse).
-  - **Marcador de texto** — destaque semi-transparente em amarelo (espessura ajustável via scroll).
+  - **Caneta** — traço contínuo (cor e espessura ajustáveis; espessura via scroll do mouse).
+  - **Marcador de texto** — destaque semi-transparente (cor e espessura ajustáveis).
   - **Laser** — ponteiro luminoso vermelho para chamar atenção.
   - **Borracha** — apague apenas os traços selecionados arrastando sobre eles (raio ajustável via scroll; duplo-clique apaga tudo na página).
   - **Desfazer / Refazer** — Ctrl+Z / Ctrl+Shift+Z para desfazer e refazer anotações (até 50 passos).
   - **Linhas retas** — segure Shift durante o arraste para travar o traço em ângulos de 45° (caneta e marcador).
-- **Botão de reset de tamanhos** — restaura os tamanhos padrão das ferramentas de anotação.
+- **Seleção de cores** — paleta de 6 cores preset com HexColorPicker para cores personalizadas; cores reiniciam ao padrão a cada abertura do app.
+- **Botão de reset de tamanhos** — restaura os tamanhos e cores padrão das ferramentas de anotação.
 - **Confirmação ao fechar** — impede fechamento acidental quando há PDF ou apresentação ativa.
+- **Sidebar toggle** — sidebars podem ser ocultadas/mostradas via atalhos (`Z` e `X`).
+- **Configurações** — dialog de configurações com seleção de cor de fundo do projetor (presets + hex personalizado), auto-hide dos controles flutuantes e timeout configurável.
 
 ## Atalhos de teclado
 
@@ -43,7 +46,9 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `←` / `Page Up` | Slide anterior |
 | `Home` | Primeiro slide |
 | `End` | Último slide |
-| `B` | Alternar tela preta |
+| `B` | Alternar tela preta (durante apresentação) |
+| `Z` | Mostrar/ocultar sidebar esquerda |
+| `X` | Mostrar/ocultar sidebar direita (preview) |
 | `Esc` | Encerrar apresentação ou voltar ao início (com confirmação) |
 | `L` | Ativar/desativar laser |
 | `P` | Ativar/desativar caneta |
@@ -84,17 +89,20 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
     - `PdfStage.tsx` — renderizador de página com zoom (CSS transform) e pan (Space+drag)
     - `AnnotationLayer.tsx` — canvas de anotações (caneta, marcador, laser, borracha)
     - `AnnotationLayerContainer.tsx` — wrapper que conecta AnnotationLayer ao contexto
+    - `ColorPicker.tsx` — paleta de cores com 6 presets, HexColorPicker e input hex
     - `FloatingControls.tsx` — controles flutuantes no modo tela cheia (navegação + ferramentas)
     - `PreviewPanel.tsx` — sidebar direita com preview do próximo slide + exportação + configurações
+    - `SettingsDialog.tsx` — dialog de configurações (cor de fundo, auto-hide, timeout)
     - `SlideCarousel.tsx` — filmstrip de miniaturas com anotações e altura ajustável
     - `NextPreview.tsx` — preview do próximo slide
     - `Timer.tsx` — cronômetro progressivo/regressivo
     - `Welcome.tsx` — tela inicial com drag-and-drop e atalhos
-    - `WelcomeSidebar.tsx` — sidebar de histórico de arquivos recentes
+    - `WelcomeSidebar.tsx` — sidebar de histórico de arquivos recentes com menu de opções
   - `src/viewscreen/` — janela de projeção (instância secundária)
   - `src/hooks/` — hooks customizados
     - `useKeyboardShortcuts.ts` — atalhos de teclado globais
     - `useAutoHide.ts` — auto-hide para controles flutuantes
+    - `useSettings.ts` — configurações persistidas (backgroundColor, auto-hide, timeout)
   - `src/lib/` — helpers
     - `pdf.ts` — leitura de PDF e comandos Rust (read_pdf, set_document, get_document, file_exists)
     - `monitors.ts` — detecção de monitores, config persistida e comandos de projeção
@@ -102,6 +110,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
     - `canvasDrawing.ts` — funções de desenho compartilhadas (drawStrokes, drawLaser, drawEraserCursor, drawToolCursor)
     - `exportPdf.ts` — exportação de PDF com anotações incorporadas
     - `fileHistory.ts` — histórico de arquivos abertos (localStorage)
+    - `utils.ts` — utilitários gerais (cn para classnames)
     - `shared.ts` — constantes de eventos e interfaces compartilhadas
 - `src-tauri/` — backend Rust
   - `src/lib.rs` — comandos (`read_pdf`, `file_exists`, `set_document`, `get_document`, `list_monitors`, `open_projections`, `close_projection`, `save_file`, etc.) e ícone embutido
@@ -149,7 +158,7 @@ A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (
 3. Clique em **Iniciar (F5)** — as janelas de projeção abrem em tela cheia nos monitores selecionados.
 4. Navegue com as setas, `Espaço` ou pelos controles da sidebar.
 5. Use as ferramentas de anotação (caneta, marcador, laser, borracha) na barra inferior da sidebar.
-6. Use `B` para tela preta e `F5`/`Esc` para encerrar.
+6. Use `Z` e `X` para ocultar/mostrar as sidebars, `B` para tela preta e `F5`/`Esc` para encerrar.
 
 ## CI/CD
 

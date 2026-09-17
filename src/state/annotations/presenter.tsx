@@ -81,9 +81,15 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
 
   const [strokesByPage, setStrokesByPage] = useState<Record<number, AnnotationStroke[]>>({});
   const [laser, setLaser] = useState<Point | null>(null);
-  const [penSize, setPenSize] = useState(PEN_SIZE);
-  const [highlighterSize, setHighlighterSize] = useState(HIGHLIGHTER_SIZE);
-  const [eraserRadius, setEraserRadius] = useState(ERASER_RADIUS);
+  const [penSize, setPenSize] = useState(() => {
+    try { const v = localStorage.getItem("presenter:penSize"); return v !== null ? Number(v) : PEN_SIZE; } catch { return PEN_SIZE; }
+  });
+  const [highlighterSize, setHighlighterSize] = useState(() => {
+    try { const v = localStorage.getItem("presenter:highlighterSize"); return v !== null ? Number(v) : HIGHLIGHTER_SIZE; } catch { return HIGHLIGHTER_SIZE; }
+  });
+  const [eraserRadius, setEraserRadius] = useState(() => {
+    try { const v = localStorage.getItem("presenter:eraserRadius"); return v !== null ? Number(v) : ERASER_RADIUS; } catch { return ERASER_RADIUS; }
+  });
   const [penColor, setPenColor] = useState(PEN_COLOR);
   const [highlighterColor, setHighlighterColor] = useState(HIGHLIGHTER_COLOR);
 
@@ -97,6 +103,16 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => { penSizeRef.current = penSize; }, [penSize]);
   useEffect(() => { highlighterSizeRef.current = highlighterSize; }, [highlighterSize]);
   useEffect(() => { eraserRadiusRef.current = eraserRadius; }, [eraserRadius]);
+
+  useEffect(() => {
+    try { localStorage.setItem("presenter:penSize", String(penSize)); } catch {}
+  }, [penSize]);
+  useEffect(() => {
+    try { localStorage.setItem("presenter:highlighterSize", String(highlighterSize)); } catch {}
+  }, [highlighterSize]);
+  useEffect(() => {
+    try { localStorage.setItem("presenter:eraserRadius", String(eraserRadius)); } catch {}
+  }, [eraserRadius]);
 
   const penColorRef = useRef(PEN_COLOR);
   const highlighterColorRef = useRef(HIGHLIGHTER_COLOR);
@@ -349,6 +365,11 @@ export function AnnotationsProvider({ children }: { children: ReactNode }) {
     setPenSize(PEN_SIZE);
     setHighlighterSize(HIGHLIGHTER_SIZE);
     setEraserRadius(ERASER_RADIUS);
+    try {
+      localStorage.setItem("presenter:penSize", String(PEN_SIZE));
+      localStorage.setItem("presenter:highlighterSize", String(HIGHLIGHTER_SIZE));
+      localStorage.setItem("presenter:eraserRadius", String(ERASER_RADIUS));
+    } catch {}
   }, []);
 
   const resetColors = useCallback(() => {

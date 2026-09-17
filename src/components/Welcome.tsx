@@ -15,6 +15,8 @@ const shortcuts: [string, string][] = [
   ["L / P / H / E", "Laser / Caneta / Marcador / Borracha"],
   ["Ctrl+Z / Ctrl+Shift+Z", "Desfazer / Refazer"],
   ["Ctrl+= / Ctrl− / Ctrl0", "Zoom in / out / resetar"],
+  ["Z", "Mostrar/Ocultar Sidebar Esquerda"],
+  ["X", "Mostrar/Ocultar Sidebar Direita"]
 ];
 
 export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
@@ -57,11 +59,10 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
       >
         {/* Drag overlay */}
         <div
-          className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-primary/5 backdrop-blur-sm transition-all duration-300 ease-out ${
-            isDragging
-              ? "pointer-events-auto opacity-100"
-              : "pointer-events-none opacity-0"
-          }`}
+          className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-primary/5 backdrop-blur-sm transition-all duration-300 ease-out ${isDragging
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+            }`}
         >
           <div
             className="flex flex-col items-center gap-4"
@@ -90,11 +91,11 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
         </Button>
 
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <div className="flex justify-center gap-2 text-xs font-medium text-muted-foreground w-90 pb-4">
             <Keyboard className="size-4" />
             Atalhos de teclado
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             {shortcuts.map(([key, label]) => (
               <div key={key} className="flex items-center justify-between gap-6 text-xs">
                 <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">

@@ -23,6 +23,8 @@ interface UseKeyboardShortcutsOptions {
   zoomReset: () => void;
   onEscape?: () => void;
   openPdf?: () => void;
+  toggleSidebar?: () => void;
+  togglePreview?: () => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
@@ -80,7 +82,20 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           }
           break;
         case "b": case "B":
-          if (o.isPresenting) o.toggleBlackScreen(); break;
+          if (o.isPresenting) {
+            o.toggleBlackScreen();
+          }
+          break;
+        case "z": case "Z":
+          if (!isInput && o.toggleSidebar) {
+            e.preventDefault(); o.toggleSidebar();
+          }
+          break;
+        case "x": case "X":
+          if (!isInput && o.togglePreview) {
+            e.preventDefault(); o.togglePreview();
+          }
+          break;
         case "l": case "L":
           if (!isInput && o.docLoaded) { e.preventDefault(); o.toggleTool("laser"); } break;
         case "p": case "P":
@@ -96,7 +111,7 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           break;
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
   }, []);
 }

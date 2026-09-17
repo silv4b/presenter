@@ -49,7 +49,7 @@ export function PreviewPanel({
         <div className="h-8 w-0.5 rounded-full bg-muted-foreground/40" />
       </div>
       <aside
-        style={{ width }}
+        // style={{ width }}
         className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4"
       >
         <div className="flex items-center justify-between">

@@ -158,7 +158,7 @@ export function SlideCarousel({
                 />
               )}
               <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-sm bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {p}
+                {p} / {numPages}
               </span>
             </button>
           );
