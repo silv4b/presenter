@@ -1,7 +1,15 @@
 {
-  "name": "tauri-app",
+  "name": "presenter",
   "private": true,
   "version": "1.2.0",
+  "description": "Aplicativo desktop de apresentação de PDFs",
+  "author": "Bruno Silva",
+  "license": "MIT",
+  "homepage": "https://github.com/silv4b/presenter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/silv4b/presenter"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

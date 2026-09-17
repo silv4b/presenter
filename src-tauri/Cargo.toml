@@ -1,9 +1,11 @@
 [package]
-name = "tauri-app"
+name = "presenter"
 version = "1.2.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Aplicativo desktop de apresentação de PDFs"
+authors = ["Bruno Silva"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/silv4b/presenter"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
