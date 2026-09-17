@@ -11,6 +11,7 @@ interface SlideCarouselProps {
   height: number;
   onHeightChange: (height: number) => void;
   strokesByPage: Record<number, AnnotationStroke[]>;
+  onResizeChange?: (resizing: boolean) => void;
 }
 
 const MIN_HEIGHT = 160;
@@ -40,6 +41,7 @@ export function SlideCarousel({
   height,
   onHeightChange,
   strokesByPage,
+  onResizeChange,
 }: SlideCarouselProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [resizing, setResizing] = useState(false);
@@ -71,6 +73,7 @@ export function SlideCarousel({
       e.preventDefault();
       e.stopPropagation();
       setResizing(true);
+      onResizeChange?.(true);
       const startY = e.clientY;
       const startH = height;
       const onMove = (ev: MouseEvent) => {
@@ -82,6 +85,7 @@ export function SlideCarousel({
         document.removeEventListener("mouseup", onUp);
         document.body.style.userSelect = "";
         setResizing(false);
+        onResizeChange?.(false);
       };
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", onMove);

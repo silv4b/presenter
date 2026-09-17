@@ -10,7 +10,7 @@ import {
 import { open } from "@tauri-apps/plugin-dialog";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { readPdfAsDataUrl, setDocument } from "@/lib/pdf";
+import { readPdfAsDataUrl, setDocument, extractNotesFromPdf } from "@/lib/pdf";
 import {
   listMonitors,
   getMonitorConfig,
@@ -40,6 +40,7 @@ interface PresentationContextValue {
   blackScreen: boolean;
   monitors: MonitorInfo[];
   selectedMonitors: string[];
+  notesByPage: Record<number, string[]>;
   refreshMonitors: () => Promise<void>;
   selectMonitor: (id: string) => void;
   openPdf: () => Promise<void>;
@@ -72,6 +73,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
+  const [notesByPage, setNotesByPage] = useState<Record<number, string[]>>({});
 
   useEffect(() => {
     let active = true;
@@ -140,8 +142,10 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       setDocDataUrl(dataUrl);
       setCurrentPage(1);
       setNumPages(0);
+      setNotesByPage({});
       addToHistory(path);
       await setDocument(path, name, 1);
+      extractNotesFromPdf(dataUrl).then((n) => setNotesByPage(n)).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -164,6 +168,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setNumPages(0);
     setCurrentPage(1);
     setError(null);
+    setNotesByPage({});
     emit(EVENT_ANNOTATION_CLEAR).catch(() => {});
   }, [isPresenting, isSingleMonitor]);
 
@@ -255,6 +260,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       blackScreen,
       monitors,
       selectedMonitors,
+      notesByPage,
       refreshMonitors,
       selectMonitor,
       openPdf,
@@ -284,6 +290,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       blackScreen,
       monitors,
       selectedMonitors,
+      notesByPage,
       refreshMonitors,
       selectMonitor,
       openPdf,
