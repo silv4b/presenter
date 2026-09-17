@@ -32,26 +32,26 @@ export function Sidebar({ onClose, width, show }: SidebarProps) {
           <button
             onClick={onClose}
             aria-label="Ocultar sidebar"
-            title="Ocultar sidebar (B)"
-            className="size-7 rounded-md hover:bg-accent transition-colors"
+            title="Ocultar sidebar (Z)"
+            className="size-7 rounded-md hover:bg-accent transition-colors flex items-center justify-center"
           >
             <PanelLeftClose className="size-4" />
           </button>
         </div>
 
-      <FileControls />
-      <Separator />
-      <MonitorSelector />
-      <Separator />
-      <PresentationControls />
-      <Separator />
-      <SlideNavigation />
+        <FileControls />
+        <Separator />
+        <MonitorSelector />
+        <Separator />
+        <PresentationControls />
+        <Separator />
+        <SlideNavigation />
 
-      <div className="mt-auto flex flex-col gap-3">
-        <AnnotationToolbar />
-        <Timer />
-      </div>
-    </aside>
-  </div>
-);
+        <div className="mt-auto flex flex-col gap-3">
+          <AnnotationToolbar />
+          <Timer />
+        </div>
+      </aside>
+    </div>
+  );
 }

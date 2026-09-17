@@ -12,6 +12,7 @@ import { AnnotationLayerContainer } from "@/components/AnnotationLayerContainer"
 import { FloatingControls } from "@/components/FloatingControls";
 import { PreviewPanel } from "@/components/PreviewPanel";
 import { PanelRightOpen, PanelLeftOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { useSettings } from "@/hooks/useSettings";
@@ -30,6 +31,7 @@ import {
 const PREVIEW_WIDTH_KEY = "presenter.previewWidth";
 const PREVIEW_VISIBLE_KEY = "presenter.previewVisible";
 const CAROUSEL_HEIGHT_KEY = "presenter.carouselHeight";
+const CAROUSEL_VISIBLE_KEY = "presenter.carouselVisible";
 const SIDEBAR_VISIBLE_KEY = "presenter.sidebarVisible";
 
 const ZOOM_MIN = 0.25;
@@ -91,6 +93,11 @@ const [previewWidth, setPreviewWidth] = useState(() => {
     if (Number.isFinite(saved)) return Math.min(300, Math.max(160, saved));
     return 180;
   });
+  const [showCarousel, setShowCarousel] = useState(() => {
+    const saved = localStorage.getItem(CAROUSEL_VISIBLE_KEY);
+    return saved !== "false";
+  });
+  const [carouselResizing, setCarouselResizing] = useState(false);
 
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -105,6 +112,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
   useEffect(() => { localStorage.setItem(PREVIEW_VISIBLE_KEY, String(showPreview)); }, [showPreview]);
   useEffect(() => { localStorage.setItem(SIDEBAR_VISIBLE_KEY, String(showSidebar)); }, [showSidebar]);
   useEffect(() => { localStorage.setItem(CAROUSEL_HEIGHT_KEY, String(carouselHeight)); }, [carouselHeight]);
+  useEffect(() => { localStorage.setItem(CAROUSEL_VISIBLE_KEY, String(showCarousel)); }, [showCarousel]);
 
   const handleZoom = useCallback((delta: number) => {
     setZoom((z) => {
@@ -194,6 +202,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
     openPdf,
     toggleSidebar: () => setShowSidebar((v) => !v),
     togglePreview: () => setShowPreview((v) => !v),
+    toggleCarousel: () => setShowCarousel((v) => !v),
   });
 
   const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);
@@ -303,14 +312,23 @@ const [previewWidth, setPreviewWidth] = useState(() => {
                       )}
                     />
                   </div>
-                  <SlideCarousel
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    onSelect={goToPage}
-                    height={carouselHeight}
-                    onHeightChange={setCarouselHeight}
-                    strokesByPage={annotations.strokesByPage}
-                  />
+                  <div
+                    className={cn(
+                      "overflow-hidden",
+                      !carouselResizing && "transition-[height] duration-300 ease-in-out",
+                    )}
+                    style={{ height: showCarousel ? carouselHeight + 6 : 0 }}
+                  >
+                    <SlideCarousel
+                      numPages={numPages}
+                      currentPage={currentPage}
+                      onSelect={goToPage}
+                      height={carouselHeight}
+                      onHeightChange={setCarouselHeight}
+                      strokesByPage={annotations.strokesByPage}
+                      onResizeChange={setCarouselResizing}
+                    />
+                  </div>
                 </Document>
 
                 <PreviewPanel

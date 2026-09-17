@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-
-type AnnotationTool = "laser" | "pen" | "highlighter" | "eraser";
+import type { AnnotationTool } from "@/lib/annotations";
 
 interface UseKeyboardShortcutsOptions {
   numPages: number;
@@ -25,6 +24,7 @@ interface UseKeyboardShortcutsOptions {
   openPdf?: () => void;
   toggleSidebar?: () => void;
   togglePreview?: () => void;
+  toggleCarousel?: () => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
@@ -94,6 +94,11 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
         case "x": case "X":
           if (!isInput && o.togglePreview) {
             e.preventDefault(); o.togglePreview();
+          }
+          break;
+        case "c": case "C":
+          if (!isInput && o.toggleCarousel) {
+            e.preventDefault(); o.toggleCarousel();
           }
           break;
         case "l": case "L":
