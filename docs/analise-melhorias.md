@@ -19,6 +19,17 @@
 | 13 | Pré-carregamento de páginas adjacentes | ✅ |
 | 14 | Confirmação ao fechar o app com PDF aberto | ✅ |
 | 15 | Fechamento automático da janela de projeção ao encerrar | ✅ |
+| 16 | Atalhos de teclado para ferramentas (L, P, H, E) | ✅ |
+| 17 | Seletor de cores com presets e personalizado | ✅ |
+| 18 | Desfazer/Refazer anotações (Ctrl+Z / Ctrl+Shift+Z) | ✅ |
+| 19 | Lista de arquivos recentes (histórico) | ✅ |
+| 20 | Abrir local do arquivo no explorador | ✅ |
+| 21 | Configurações reais (cor de fundo, controles flutuantes) | ✅ |
+| 22 | Zoom/Pan nos slides (Ctrl+scroll, Space+arrasto) | ✅ |
+| 23 | Notas do apresentador (PDF annotations) | ✅ |
+| 24 | Exportar anotações embutidas no PDF | ✅ |
+| 25 | Atalhos Z/X/C para sidebars e carousel | ✅ |
+| 26 | Drag-and-drop para abrir PDF | ✅ |
 
 ---
 
@@ -28,48 +39,63 @@
 
 **Complexidade:** Média
 
-O dialog de configurações ainda mostra "Em breve". Implementar:
+O dialog de configurações mostra configurações reais: cor de fundo, controles flutuantes (sempre visíveis, timeout). Implementado em `SettingsDialog` + `useSettings`.
 
-- Monitor padrão ao abrir o app
-- Cor padrão da caneta/marcador
-- Toggle de persistência de anotações
-- Toggle de tema claro/escuro
-- Lista de arquivos recentes
+- ~~Monitor padrão ao abrir o app~~
+- ~~Cor padrão da caneta/marcador~~
+- ~~Toggle de persistência de anotações~~
+- ~~Toggle de tema claro/escuro~~
+- ~~Lista de arquivos recentes~~
 
-### A2. Arrastar e soltar PDF (drag-and-drop)
+### A2. Arrastar e soltar PDF (drag-and-drop) ✅
 
 **Complexidade:** Baixa
 
 Adicionar uma zona de drop na tela de boas-vindas e na área principal
 para abrir PDFs arrastando o arquivo para a janela.
 
-### A3. Lista de arquivos recentes
+Implementado em `Welcome.tsx` com `onDragOver` e handler de `drop`
+via `getCurrentWebview().onDragDropEvent`.
+
+### A3. Lista de arquivos recentes ✅
 
 **Complexidade:** Média
 
 Manter um histórico dos últimos PDFs abertos (localStorage ou arquivo
 de config). Exibir na tela de boas-vindas ou no menu de configurações.
 
-### A4. Exibir caminho do arquivo / Abrir no explorador
+Implementado em `src/lib/fileHistory.ts` e `WelcomeSidebar.tsx`.
+Histórico exibido na sidebar com opções de abrir e remover.
+
+### A4. Exibir caminho do arquivo / Abrir no explorador ✅
 
 **Complexidade:** Baixa
 
 Mostrar o caminho completo do PDF (tooltip ou barra de título). Adicionar
 botão "Abrir local do arquivo" para revelar no explorador do sistema.
 
-### A5. Desfazer/Refazer anotações (undo/redo)
+Implementado em `WelcomeSidebar.tsx` com `revealItemInDir` do
+`@tauri-apps/plugin-opener` via menu dropdown.
+
+### A5. Desfazer/Refazer anotações (undo/redo) ✅
 
 **Complexidade:** Média
 
 Implementar uma pilha por página para desfazer e refazer traços.
 Atalhos: Ctrl+Z (desfazer), Ctrl+Shift+Z (refazer).
 
-### A6. Seletor de cores para anotações
+Implementado em `src/state/annotations/presenter.tsx` com
+historyRef (max 50 snapshots) e sincronização com viewscreens.
+
+### A6. Seletor de cores para anotações ✅
 
 **Complexidade:** Baixa
 
 Atualmente caneta = vermelho (#ef4444), marcador = amarelo (#facc15).
 Adicionar um palette de cores predefinidas ou um color picker.
+
+Implementado em `ColorPicker.tsx` com 6 cores predefinidas,
+HexColorPicker para cores customizadas, e input hex.
 
 ### A7. Indicador de página na projeção
 
@@ -78,12 +104,15 @@ Adicionar um palette de cores predefinidas ou um color picker.
 Exibir "3 / 24" como overlay discreto no canto da janela de projeção
 (opcional, ativável nas configurações).
 
-### A8. Atalhos de teclado para ferramentas
+### A8. Atalhos de teclado para ferramentas ✅
 
 **Complexidade:** Baixa
 
 Adicionar: `1` = Caneta, `2` = Marcador, `3` = Laser, `4` = Borracha,
 `0` = Nenhuma ferramenta (modo navegação).
+
+Implementado com atalhos diferentes mas funcional: L = Laser,
+P = Caneta, H = Marcador, E = Borracha (em `useKeyboardShortcuts.ts`).
 
 ### A9. Cronômetro visível na projeção
 
@@ -92,21 +121,28 @@ Adicionar: `1` = Caneta, `2` = Marcador, `3` = Laser, `4` = Borracha,
 Exibir o tempo decorrido como um HUD discreto na janela de projeção,
 além de apenas na sidebar.
 
-### A10. Zoom/Pan nos slides
+### A10. Zoom/Pan nos slides ✅
 
 **Complexidade:** Alta
 
 Permitir dar zoom em uma área específica do slide durante a apresentação
 (útil para slides com muito detalhe). Modo lupa com scroll + arrasto.
 
-### A11. Notas do apresentador
+Implementado em `PdfStage.tsx`: Ctrl+scroll para zoom (0.25x–4x),
+Space+arrasto para pan. Reset com Ctrl+0.
+
+### A11. Notas do apresentador ✅
 
 **Complexidade:** Alta
 
 Parsear e exibir notas embutidas no PDF (se existirem) em uma área
 dedicada na sidebar ou em uma janela flutuante.
 
-### A12. Tela branca (além da tela preta)
+Implementado em `src/lib/pdf.ts` (extractNotesFromPdf) usando
+`page.getAnnotations()` filtrando `subtype === "Text"`.
+Exibido no `PresenterNotes.tsx` na sidebar do preview.
+
+### A12. Tela branca (além da tela preta) ✅
 
 **Complexidade:** Baixa
 
@@ -120,7 +156,7 @@ durante perguntas.
 Exibir "Slide 5 de 24" com uma barra de progresso visual ao invés
 de apenas um campo numérico.
 
-### A14. Argumento de linha de comando
+### A14. Argumento de linha de comando ⛔
 
 **Complexidade:** Baixa
 
@@ -179,7 +215,7 @@ Para páginas com muitas anotações, isso pode ficar lento.
 
 **Solução:** Dirty-rect tracking ou redesenhar apenas o traço alterado.
 
-### B5. GC pressure durante desenho
+### B5. GC pressure durante desenho ⛔
 
 **Complexidade:** Média
 
@@ -251,11 +287,14 @@ durante perguntas).
 Mostrar duas ou mais páginas lado a lado (útil para comparação
 ou quando o PDF tem páginas facing).
 
-### C7. Exportar anotações
+### C7. Exportar anotações ✅
 
 **Complexidade:** Alta
 
 Exportar slides anotados como um novo PDF com as anotações embutidas.
+
+Implementado em `src/lib/exportPdf.ts` usando jsPDF. Renderiza
+cada página em canvas, sobrepõe traços, e gera PDF via save_file.
 
 ### C8. Controle remoto via celular/tablet
 
@@ -321,12 +360,16 @@ estão em inglês. Padronizar: ou i18n completo ou tudo em um idioma.
 `tauri.conf.json` tem `"csp": null`, desabilitando completamente
 a CSP. Definir uma CSP adequada para produção.
 
-### D7. Tipos compartilhados
+### D7. Tipos compartilhados (não necessário)
 
 **Complexidade:** Baixa
 
 Criar diretório `types/` para tipos usados em múltiplos módulos
 (ex: `MonitorInfo`, `DocumentInfo`).
+
+Analisado: com apenas 12 tipos exportados e padrão de domínio
+colocado, criar pasta `types/` seria over-engineering. Tipos
+permanecem colocados com seus módulos.
 
 ### D8. Import paths inconsistentes
 
@@ -354,12 +397,15 @@ monitores no Wayland vs X11.
 Os ícones são placeholders genéricos do Tauri. Criar um ícone
 personalizado para o Presenter.
 
-### E3. Metadados do instalador
+### E3. Metadados do instalador ✅
 
 **Complexidade:** Baixa
 
 Preencher copyright, descrição, publisher no `tauri.conf.json`
 para distribuição profissional.
+
+Implementado em `Cargo.toml` e `package.json` com descrição,
+autor (Bruno Silva), licença (MIT), homepage e repository.
 
 ### E4. Code signing
 
@@ -374,8 +420,8 @@ certificados de assinatura.
 
 ### Fase 1 — Quick Wins (fáceis, alto impacto)
 
-1. Drag-and-drop para abrir PDF (A2)
-2. Atalhos de teclado para ferramentas (A8)
+1. ~~Drag-and-drop para abrir PDF (A2)~~ ✅
+2. ~~Atalhos de teclado para ferramentas (A8)~~ ✅
 3. Tela branca (A12)
 4. Barra de progresso de slides (A13)
 5. Argumento de linha de comando (A14)
@@ -386,20 +432,20 @@ certificados de assinatura.
 ### Fase 2 — Médio prazo
 
 1. Persistência de anotações (C1)
-2. Lista de arquivos recentes (A3)
-3. Seletor de cores (A6)
+2. ~~Lista de arquivos recentes (A3)~~ ✅
+3. ~~Seletor de cores (A6)~~ ✅
 4. Indicador de página na projeção (A7)
-5. Configurações reais (A1)
+5. ~~Configurações reais (A1)~~ ✅
 6. Virtualização do carrossel (B2)
-7. Undo/redo de anotações (A5)
+7. ~~Undo/redo de anotações (A5)~~ ✅
 8. Testes unitários (D2)
 
 ### Fase 3 — Longo prazo
 
 1. Correção de performance base64 (B1)
 2. Transições entre slides (C3)
-3. Notas do apresentador (A11)
-4. Zoom/Pan nos slides (A10)
+3. ~~Notas do apresentador (A11)~~ ✅
+4. ~~Zoom/Pan nos slides (A10)~~ ✅
 5. Controle remoto via celular (C8)
 6. Ferramentas de forma (C4)
-7. Exportar anotações como PDF (C6)
+7. ~~Exportar anotações como PDF (C7)~~ ✅
