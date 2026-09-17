@@ -46,6 +46,7 @@ function PresenterShell() {
     isPresenting,
     isSingleMonitor,
     blackScreen,
+    whiteScreen,
     error,
     setError,
     toggleTool,
@@ -56,6 +57,7 @@ function PresenterShell() {
     startPresentation,
     stopPresentation,
     toggleBlackScreen,
+    toggleWhiteScreen,
     closeDocument,
     openPdf,
   } = usePresentation();
@@ -189,6 +191,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
     startPresentation,
     stopPresentation,
     toggleBlackScreen,
+    toggleWhiteScreen,
     toggleTool,
     undo: annotations.undo,
     redo: annotations.redo,
@@ -270,6 +273,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
           </Document>
 
           {blackScreen && <div className="absolute inset-0 z-10 bg-black" />}
+          {whiteScreen && <div className="absolute inset-0 z-10 bg-white" />}
 
           <FloatingControls visible={controlsVisible} onStopPresentation={() => setConfirmExitOpen(true)} />
         </div>

@@ -22,6 +22,7 @@ import {
 import {
   EVENT_SLIDE_CHANGE,
   EVENT_BLACK_SCREEN,
+  EVENT_WHITE_SCREEN,
   type SlideChangePayload,
 } from "@/lib/shared";
 import { EVENT_ANNOTATION_CLEAR, type AnnotationTool } from "@/lib/annotations";
@@ -38,6 +39,7 @@ interface PresentationContextValue {
   isPresenting: boolean;
   isSingleMonitor: boolean;
   blackScreen: boolean;
+  whiteScreen: boolean;
   monitors: MonitorInfo[];
   selectedMonitors: string[];
   notesByPage: Record<number, string[]>;
@@ -53,6 +55,7 @@ interface PresentationContextValue {
   startPresentation: () => Promise<void>;
   stopPresentation: () => Promise<void>;
   toggleBlackScreen: () => void;
+  toggleWhiteScreen: () => void;
   activeTool: AnnotationTool | null;
   toggleTool: (tool: AnnotationTool) => void;
   setError: (error: string | null) => void;
@@ -70,6 +73,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isPresenting, setIsPresenting] = useState(false);
   const [blackScreen, setBlackScreen] = useState(false);
+  const [whiteScreen, setWhiteScreen] = useState(false);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
@@ -215,7 +219,8 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       () => {},
     );
     emit(EVENT_BLACK_SCREEN, { black: blackScreen }).catch(() => {});
-  }, [currentPage, blackScreen, selectedMonitors, monitors, isSingleMonitor]);
+    emit(EVENT_WHITE_SCREEN, { white: whiteScreen }).catch(() => {});
+  }, [currentPage, blackScreen, whiteScreen, selectedMonitors, monitors, isSingleMonitor]);
 
   const stopPresentation = useCallback(async () => {
     if (isSingleMonitor) {
@@ -238,6 +243,22 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
     setBlackScreen((prev) => {
       const next = !prev;
       emit(EVENT_BLACK_SCREEN, { black: next }).catch(() => {});
+      if (next) {
+        setWhiteScreen(false);
+        emit(EVENT_WHITE_SCREEN, { white: false }).catch(() => {});
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleWhiteScreen = useCallback(() => {
+    setWhiteScreen((prev) => {
+      const next = !prev;
+      emit(EVENT_WHITE_SCREEN, { white: next }).catch(() => {});
+      if (next) {
+        setBlackScreen(false);
+        emit(EVENT_BLACK_SCREEN, { black: false }).catch(() => {});
+      }
       return next;
     });
   }, []);
@@ -258,6 +279,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       isPresenting,
       isSingleMonitor,
       blackScreen,
+      whiteScreen,
       monitors,
       selectedMonitors,
       notesByPage,
@@ -273,6 +295,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       startPresentation,
       stopPresentation,
       toggleBlackScreen,
+      toggleWhiteScreen,
       activeTool,
       toggleTool,
       setError,
@@ -288,6 +311,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       isPresenting,
       isSingleMonitor,
       blackScreen,
+      whiteScreen,
       monitors,
       selectedMonitors,
       notesByPage,
@@ -302,6 +326,7 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       startPresentation,
       stopPresentation,
       toggleBlackScreen,
+      toggleWhiteScreen,
       activeTool,
       toggleTool,
       setError,

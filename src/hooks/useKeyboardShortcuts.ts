@@ -14,6 +14,7 @@ interface UseKeyboardShortcutsOptions {
   startPresentation: () => void;
   stopPresentation: () => void;
   toggleBlackScreen: () => void;
+  toggleWhiteScreen: () => void;
   toggleTool: (tool: AnnotationTool) => void;
   undo: () => void;
   redo: () => void;
@@ -84,6 +85,11 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
         case "b": case "B":
           if (o.isPresenting) {
             o.toggleBlackScreen();
+          }
+          break;
+        case "w": case "W":
+          if (!isInput && o.isPresenting) {
+            o.toggleWhiteScreen();
           }
           break;
         case "z": case "Z":

@@ -7,6 +7,7 @@ import { useViewscreenAnnotations } from "@/state/annotations";
 import {
   EVENT_SLIDE_CHANGE,
   EVENT_BLACK_SCREEN,
+  EVENT_WHITE_SCREEN,
   type SlideChangePayload,
 } from "@/lib/shared";
 
@@ -15,6 +16,7 @@ export default function Viewscreen() {
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(1);
   const [black, setBlack] = useState(false);
+  const [white, setWhite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState(() => localStorage.getItem("presenter.backgroundColor") ?? "#000000");
   const { strokesByPage, laser } = useViewscreenAnnotations();
@@ -50,6 +52,12 @@ export default function Viewscreen() {
     });
     listen<{ black: boolean }>(EVENT_BLACK_SCREEN, (e) => {
       setBlack(e.payload.black);
+    }).then((u) => {
+      if (disposed) u();
+      else unlisteners.push(u);
+    });
+    listen<{ white: boolean }>(EVENT_WHITE_SCREEN, (e) => {
+      setWhite(e.payload.white);
     }).then((u) => {
       if (disposed) u();
       else unlisteners.push(u);
@@ -114,6 +122,7 @@ export default function Viewscreen() {
         </div>
       )}
       {black && <div className="absolute inset-0 z-10 bg-black" />}
+      {white && <div className="absolute inset-0 z-10 bg-white" />}
     </div>
   );
 }
