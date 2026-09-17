@@ -51,7 +51,7 @@ export function PreviewPanel({
       </div>
       <aside
         // style={{ width }}
-        className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4"
+        className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4 w-full"
       >
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -72,14 +72,12 @@ export function PreviewPanel({
           <Download className="size-3.5" />
           Exportar PDF
         </Button>
-        {Object.keys(notesByPage).length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Notas
-            </span>
-            <PresenterNotes notes={notesByPage} currentPage={currentPage} />
-          </div>
-        )}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Notas
+          </span>
+          <PresenterNotes notes={notesByPage} currentPage={currentPage} />
+        </div>
         <div className="mt-auto flex justify-end">
           <Button size="icon" variant="ghost" onClick={onOpenSettings} aria-label="Configurações" title="Configurações">
             <Settings className="size-4" />
