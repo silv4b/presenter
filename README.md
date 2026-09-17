@@ -49,6 +49,7 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `B` | Alternar tela preta (durante apresentação) |
 | `Z` | Mostrar/ocultar sidebar esquerda |
 | `X` | Mostrar/ocultar sidebar direita (preview) |
+| `C` | Mostrar/Ocultar Carrousel |
 | `Esc` | Encerrar apresentação ou voltar ao início (com confirmação) |
 | `L` | Ativar/desativar laser |
 | `P` | Ativar/desativar caneta |

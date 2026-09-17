@@ -16,7 +16,8 @@ const shortcuts: [string, string][] = [
   ["Ctrl+Z / Ctrl+Shift+Z", "Desfazer / Refazer"],
   ["Ctrl+= / Ctrl− / Ctrl0", "Zoom in / out / resetar"],
   ["Z", "Mostrar/Ocultar Sidebar Esquerda"],
-  ["X", "Mostrar/Ocultar Sidebar Direita"]
+  ["X", "Mostrar/Ocultar Sidebar Direita"],
+  ["C", "Mostrar/Ocultar Carrousel"]
 ];
 
 export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
