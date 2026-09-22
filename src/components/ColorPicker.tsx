@@ -193,7 +193,7 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
                 key={c}
                 type="button"
                 className={cn(
-                  "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                  "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer",
                   "border-white/30",
                   isActive && "border-white scale-110",
                 )}
@@ -219,7 +219,7 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
               key={c}
               type="button"
               className={cn(
-                "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                "size-5 shrink-0 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer",
                 "border-border",
                 isActive && "border-foreground scale-110",
               )}

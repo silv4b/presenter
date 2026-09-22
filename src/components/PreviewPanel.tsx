@@ -57,7 +57,7 @@ export function PreviewPanel({
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Próximo
           </span>
-          <Button size="icon" variant="ghost" onClick={onHide} aria-label="Ocultar preview" title="Ocultar preview (X)">
+          <Button size="icon" variant="ghost" onClick={onHide} aria-label="Ocultar preview" title="Ocultar preview (X)" className="cursor-pointer">
             <PanelRightClose className="size-4" />
           </Button>
         </div>
@@ -68,7 +68,7 @@ export function PreviewPanel({
         ) : (
           <p className="text-xs text-muted-foreground">Fim da apresentação</p>
         )}
-        <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleExport}>
+        <Button variant="outline" size="sm" className="w-full gap-2 cursor-pointer" onClick={handleExport}>
           <Download className="size-3.5" />
           Exportar PDF
         </Button>
@@ -79,7 +79,7 @@ export function PreviewPanel({
           <PresenterNotes notes={notesByPage} currentPage={currentPage} />
         </div>
         <div className="mt-auto flex justify-end">
-          <Button size="icon" variant="ghost" onClick={onOpenSettings} aria-label="Configurações" title="Configurações">
+          <Button size="icon" variant="ghost" onClick={onOpenSettings} aria-label="Configurações" title="Configurações" className="cursor-pointer">
             <Settings className="size-4" />
           </Button>
         </div>

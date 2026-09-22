@@ -73,7 +73,7 @@ const CarouselItem = memo(function CarouselItem({
       onClick={() => onSelect(pageNumber)}
       title={`Ir para o slide ${pageNumber}`}
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-sm border-2 py-1 transition-colors",
+        "relative shrink-0 overflow-hidden rounded-sm border-2 py-1 transition-colors cursor-pointer",
         isActive
           ? "border-primary"
           : "border-transparent hover:border-muted-foreground",

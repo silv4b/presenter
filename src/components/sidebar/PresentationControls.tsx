@@ -17,7 +17,7 @@ export function PresentationControls() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            className="w-full"
+            className="w-full cursor-pointer"
             disabled={canStart}
             onClick={isPresenting ? stopPresentation : startPresentation}
           >
@@ -48,7 +48,7 @@ export function PresentationControls() {
           <Button
             variant={blackScreen ? "destructive" : "outline"}
             onClick={toggleBlackScreen}
-            className="w-full"
+            className="w-full cursor-pointer"
           >
             <MonitorOff className="size-4" />
             Tela preta (B)
@@ -64,7 +64,7 @@ export function PresentationControls() {
           <Button
             variant={whiteScreen ? "destructive" : "outline"}
             onClick={toggleWhiteScreen}
-            className="w-full"
+            className="w-full cursor-pointer"
           >
             <Sun className="size-4" />
             Tela branca (W)

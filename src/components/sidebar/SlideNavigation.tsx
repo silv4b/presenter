@@ -19,6 +19,7 @@ export function SlideNavigation() {
               onClick={prevPage}
               disabled={currentPage <= 1}
               aria-label="Slide anterior"
+              className="cursor-pointer"
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -50,6 +51,7 @@ export function SlideNavigation() {
               onClick={nextPage}
               disabled={currentPage >= numPages}
               aria-label="Próximo slide"
+              className="cursor-pointer"
             >
               <ChevronRight className="size-4" />
             </Button>

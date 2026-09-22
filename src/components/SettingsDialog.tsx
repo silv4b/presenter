@@ -93,7 +93,7 @@ export function SettingsDialog({
                   key={c.value}
                   type="button"
                   className={cn(
-                    "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                    "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer",
                     backgroundColor === c.value
                       ? "border-foreground scale-110"
                       : "border-border",
@@ -107,7 +107,7 @@ export function SettingsDialog({
                 ref={customBtnRef}
                 type="button"
                 className={cn(
-                  "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110",
+                  "size-8 shrink-0 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer",
                   isPreset ? "border-border" : "border-foreground scale-110",
                 )}
                 style={{ backgroundColor: isPreset ? (lastCustom ?? "#3f3f46") : backgroundColor }}

@@ -86,7 +86,7 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
           </p>
         </div>
 
-        <Button size="lg" onClick={openPdf}>
+        <Button size="lg" onClick={openPdf} className="cursor-pointer">
           <FolderOpen className="size-4" />
           Abrir PDF
         </Button>
@@ -114,7 +114,7 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
           onClick={onOpenSettings}
           aria-label="Configurações"
           title="Configurações"
-          className="absolute bottom-4 right-4"
+          className="absolute bottom-4 right-4 cursor-pointer"
         >
           <Settings className="size-4" />
         </Button>

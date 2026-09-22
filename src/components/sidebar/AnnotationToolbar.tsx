@@ -83,6 +83,7 @@ export function AnnotationToolbar() {
                   onClick={() => toggleTool(tool)}
                   disabled={!docLoaded}
                   aria-label={label.split(" ")[0]}
+                  className="cursor-pointer"
                 >
                   <Icon className="size-4" />
                 </Button>
@@ -104,6 +105,7 @@ export function AnnotationToolbar() {
                 onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); setColorCustomized(false); }}
                 disabled={!docLoaded || isDefault}
                 aria-label="Restaurar tamanhos padrão"
+                className="cursor-pointer"
               >
                 <RotateCcw className="size-4" />
               </Button>
@@ -116,7 +118,7 @@ export function AnnotationToolbar() {
         <div className="flex flex-col items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" onClick={undo} disabled={!docLoaded || !canUndo} aria-label="Desfazer">
+              <Button size="icon" variant="ghost" onClick={undo} disabled={!docLoaded || !canUndo} aria-label="Desfazer" className="cursor-pointer">
                 <Undo2 className="size-4" />
               </Button>
             </TooltipTrigger>
@@ -128,7 +130,7 @@ export function AnnotationToolbar() {
         <div className="flex flex-col items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" onClick={redo} disabled={!docLoaded || !canRedo} aria-label="Refazer">
+              <Button size="icon" variant="ghost" onClick={redo} disabled={!docLoaded || !canRedo} aria-label="Refazer" className="cursor-pointer">
                 <Redo2 className="size-4" />
               </Button>
             </TooltipTrigger>

@@ -78,7 +78,7 @@ export function Timer() {
           variant="ghost"
           size="sm"
           onClick={() => switchMode("stopwatch")}
-          className={cn(mode === "stopwatch" && "bg-muted")}
+          className={cn(mode === "stopwatch" && "bg-muted", "cursor-pointer")}
         >
           Progressivo
         </Button>
@@ -86,7 +86,7 @@ export function Timer() {
           variant="ghost"
           size="sm"
           onClick={() => switchMode("countdown")}
-          className={cn(mode === "countdown" && "bg-muted")}
+          className={cn(mode === "countdown" && "bg-muted", "cursor-pointer")}
         >
           Regressivo
         </Button>
@@ -111,11 +111,11 @@ export function Timer() {
       )}
 
       <div className="flex items-center gap-1">
-        <Button size="sm" onClick={() => setRunning((r) => !r)} className="flex-1">
+        <Button size="sm" onClick={() => setRunning((r) => !r)} className="flex-1 cursor-pointer">
           {running ? <Pause className="size-4" /> : <Play className="size-4" />}
           {running ? "Pausar" : "Iniciar"}
         </Button>
-        <Button size="icon" variant="outline" onClick={reset} aria-label="Zerar">
+        <Button size="icon" variant="outline" onClick={reset} aria-label="Zerar" className="cursor-pointer">
           <RotateCcw className="size-4" />
         </Button>
       </div>
