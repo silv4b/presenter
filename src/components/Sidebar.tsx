@@ -17,14 +17,14 @@ interface SidebarProps {
 export function Sidebar({ onClose, width, show }: SidebarProps) {
   return (
     <div
-      className={cn(
-        "flex shrink-0 overflow-hidden",
-        "transition-[width] duration-300 ease-in-out",
-      )}
+      className={cn("flex shrink-0 overflow-hidden", "transition-[width] duration-300 ease-in-out")}
       style={{ width: show ? width : 0 }}
     >
       <aside
-        className="flex shrink-0 h-full flex-col gap-4 border-r border-border bg-card p-4"
+        className={cn(
+          "flex shrink-0 h-full flex-col gap-4 border-r border-border bg-card p-4 transition-transform duration-300 ease-in-out",
+          show ? "translate-x-0" : "-translate-x-full",
+        )}
         style={{ width }}
       >
         <div className="flex items-center justify-between gap-2">
@@ -33,7 +33,7 @@ export function Sidebar({ onClose, width, show }: SidebarProps) {
             onClick={onClose}
             aria-label="Ocultar sidebar"
             title="Ocultar sidebar (Z)"
-            className="size-7 rounded-md hover:bg-accent transition-colors flex items-center justify-center"
+            className="size-7 rounded-md hover:bg-accent transition-colors flex items-center justify-center cursor-pointer"
           >
             <PanelLeftClose className="size-4" />
           </button>
