@@ -2,6 +2,7 @@ export const VIEWSCREEN_LABEL = "viewscreen";
 
 export const EVENT_SLIDE_CHANGE = "mudar-slide";
 export const EVENT_BLACK_SCREEN = "tela-preta";
+export const EVENT_WHITE_SCREEN = "tela-branca";
 
 export interface SlideChangePayload {
   page: number;

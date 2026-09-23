@@ -51,7 +51,7 @@ export function WelcomeSidebar() {
             <Button
               variant="ghost"
               size="icon-sm"
-              className="size-6"
+              className="size-6 cursor-pointer"
               title="Limpar histórico"
               onClick={() => setConfirmClear(true)}
             >
@@ -68,11 +68,11 @@ export function WelcomeSidebar() {
             history.map((entry) => (
               <div
                 key={entry.path}
-                className="group flex items-center gap-2 rounded-md py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                className="group flex items-center gap-2 rounded-md py-1.5 text-left text-sm transition-colors hover:bg-muted cursor-pointer"
               >
                 <button
                   onClick={() => handleClick(entry)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
                 >
                   <FileText className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1 text-left">
@@ -87,19 +87,20 @@ export function WelcomeSidebar() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="size-6 shrink-0"
+                      className="size-6 shrink-0 cursor-pointer"
                     >
                       <MoreVertical className="size-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-46 flex flex-col gap-1">
-                    <DropdownMenuItem onClick={() => revealItemInDir(entry.path)}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => revealItemInDir(entry.path)}>
                       <FolderOpen className="size-3.5" />
                       Abrir local do arquivo
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      variant="destructive"
+                      className="cursor-pointer"
                       onClick={() => setHistory(removeFromHistory(entry.path))}
+                      variant="destructive"
                     >
                       <Trash2 className="size-3.5" />
                       Remover do histórico
@@ -121,7 +122,7 @@ export function WelcomeSidebar() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmClear(false)}>
+            <Button variant="outline" className="cursor-pointer" onClick={() => setConfirmClear(false)}>
               Cancelar
             </Button>
             <Button
@@ -130,6 +131,7 @@ export function WelcomeSidebar() {
                 setHistory(clearHistory());
                 setConfirmClear(false);
               }}
+              className="cursor-pointer"
             >
               Limpar
             </Button>
@@ -150,7 +152,7 @@ export function WelcomeSidebar() {
             {errorPath}
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setErrorPath(null)}>
+            <Button variant="outline" className="cursor-pointer" onClick={() => setErrorPath(null)}>
               Fechar
             </Button>
           </DialogFooter>

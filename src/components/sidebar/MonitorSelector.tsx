@@ -33,7 +33,7 @@ export function MonitorSelector() {
                 await Promise.all([refreshMonitors(), min]);
                 setRefreshing(false);
               }}
-              className="size-6"
+              className="size-6 cursor-pointer"
               aria-label="Atualizar monitores"
             >
               <RefreshCw className={cn("size-3.5 transition-transform", refreshing && "animate-spin")} />
@@ -54,19 +54,19 @@ export function MonitorSelector() {
             const primaryChecked = selectedMonitors.some((id) => monitors.find((mm) => mm.id === id)?.primary);
             const disabled = primaryChecked && !m.primary;
             return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => selectMonitor(m.id)}
-                disabled={disabled}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
-                  checked
-                    ? "bg-primary/10 text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
-                )}
-              >
+<button
+              key={m.id}
+              type="button"
+              onClick={() => selectMonitor(m.id)}
+              disabled={disabled}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors cursor-pointer",
+                checked
+                  ? "bg-primary/10 text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
+              )}
+            >
                 <div
                   className={cn(
                     "flex size-4 shrink-0 items-center justify-center rounded-sm border transition-colors",

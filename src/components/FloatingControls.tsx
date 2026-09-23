@@ -80,17 +80,17 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
           visible ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
       >
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10" onClick={prevPage} disabled={currentPage <= 1}>
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={prevPage} disabled={currentPage <= 1}>
           <ChevronLeft className="size-4" />
         </Button>
         <span className="min-w-16 px-1 text-center text-xs font-medium text-white/80 tabular-nums">
           {currentPage} / {numPages}
         </span>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10" onClick={nextPage} disabled={currentPage >= numPages}>
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={nextPage} disabled={currentPage >= numPages}>
           <ChevronRight className="size-4" />
         </Button>
         <div className="mx-1 h-5 w-px bg-white/20" />
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40" onClick={onStopPresentation} title="Encerrar apresentação (Esc)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40 cursor-pointer" onClick={onStopPresentation} title="Encerrar apresentação (Esc)">
           <Square className="size-3.5" />
         </Button>
       </div>
@@ -121,13 +121,13 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         </div>
         <div className="mx-1 h-5 w-px bg-white/20" />
         {tools.map(([tool, Icon, label]) => (
-          <Button key={tool} size="icon" variant="ghost" className={toolClass(tool)} onClick={() => toggleTool(tool)} title={label}>
+          <Button key={tool} size="icon" variant="ghost" className={cn(toolClass(tool), "cursor-pointer")} onClick={() => toggleTool(tool)} title={label}>
             <Icon className="size-4" />
           </Button>
         ))}
         <div className="mx-1 h-5 w-px bg-white/20" />
         <Button
-          size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10"
+          size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer"
           onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); setColorCustomized(false); }}
           disabled={penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER && !colorCustomized}
           title="Restaurar tamanhos padrão"
@@ -135,10 +135,10 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
           <RotateCcw className="size-3.5" />
         </Button>
         <div className="mx-1 h-5 w-px bg-white/20" />
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">
           <Undo2 className="size-3.5" />
         </Button>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)">
           <Redo2 className="size-3.5" />
         </Button>
       </div>

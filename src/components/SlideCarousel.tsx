@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Page } from "@/lib/pdf";
 import { cn } from "@/lib/utils";
 import type { AnnotationStroke } from "@/lib/annotations";
@@ -34,6 +34,76 @@ function drawThumbnailAnnotations(
   drawStrokes(ctx, strokes, thumbH / pageH);
 }
 
+interface CarouselItemProps {
+  pageNumber: number;
+  numPages: number;
+  isActive: boolean;
+  thumbHeight: number;
+  strokes: AnnotationStroke[] | undefined;
+  dim: { w: number; h: number } | undefined;
+  onSelect: (page: number) => void;
+  onLoadDims: (page: number, w: number, h: number) => void;
+}
+
+const CarouselItem = memo(function CarouselItem({
+  pageNumber,
+  numPages,
+  isActive,
+  thumbHeight,
+  strokes,
+  dim,
+  onSelect,
+  onLoadDims,
+}: CarouselItemProps) {
+  const hasAnnotations = strokes && strokes.length > 0;
+  const thumbW = dim ? (dim.w / dim.h) * thumbHeight : undefined;
+
+  const handleLoadSuccess = useCallback(
+    (page: { getViewport: (opts: { scale: number }) => { width: number; height: number } }) => {
+      const vp = page.getViewport({ scale: 1 });
+      onLoadDims(pageNumber, vp.width, vp.height);
+    },
+    [pageNumber, onLoadDims],
+  );
+
+  return (
+    <button
+      type="button"
+      data-page={pageNumber}
+      onClick={() => onSelect(pageNumber)}
+      title={`Ir para o slide ${pageNumber}`}
+      className={cn(
+        "relative shrink-0 overflow-hidden rounded-sm border-2 py-1 transition-colors cursor-pointer",
+        isActive
+          ? "border-primary"
+          : "border-transparent hover:border-muted-foreground",
+      )}
+    >
+      <div className="relative" style={thumbW ? { width: thumbW } : undefined}>
+        <Page
+          pageNumber={pageNumber}
+          height={thumbHeight}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          loading={null}
+          onLoadSuccess={handleLoadSuccess}
+        />
+        {hasAnnotations && dim && (
+          <ThumbnailAnnotations
+            strokes={strokes}
+            pageW={dim.w}
+            pageH={dim.h}
+            thumbH={thumbHeight}
+          />
+        )}
+      </div>
+      <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-sm bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
+        {pageNumber} / {numPages}
+      </span>
+    </button>
+  );
+});
+
 export function SlideCarousel({
   numPages,
   currentPage,
@@ -56,8 +126,8 @@ export function SlideCarousel({
     if (!el) return;
     const target =
       el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-    container.scrollTo({ left: target, behavior: "smooth" });
-  }, [currentPage]);
+    container.scrollTo({ left: target, behavior: resizing ? "auto" : "smooth" });
+  }, [currentPage, height]);
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const container = listRef.current;
@@ -94,7 +164,7 @@ export function SlideCarousel({
     [height, onHeightChange],
   );
 
-  const handlePageLoad = useCallback(
+  const handleLoadDims = useCallback(
     (page: number, w: number, h: number) => {
       setPageDims((prev) => {
         if (prev[page]?.w === w && prev[page]?.h === h) return prev;
@@ -105,6 +175,8 @@ export function SlideCarousel({
   );
 
   if (numPages <= 0) return null;
+
+  const thumbHeight = Math.max(1, height - 66);
 
   return (
     <div className="flex shrink-0 flex-col border-t border-border bg-card">
@@ -124,49 +196,19 @@ export function SlideCarousel({
         className="thin-scrollbar flex items-center gap-2 px-3"
         style={{ height, overflowX: "auto", overflowY: "hidden", paddingTop: 0, paddingBottom: 0 }}
       >
-        {Array.from({ length: numPages }, (_, i) => i + 1).map((p) => {
-          const strokes = strokesByPage[p];
-          const dim = pageDims[p];
-          const hasAnnotations = strokes && strokes.length > 0;
-          return (
-            <button
-              key={p}
-              type="button"
-              data-page={p}
-              onClick={() => onSelect(p)}
-              title={`Ir para o slide ${p}`}
-              className={cn(
-                "relative shrink-0 overflow-hidden rounded-sm border-2 py-1 transition-colors",
-                p === currentPage
-                  ? "border-primary"
-                  : "border-transparent hover:border-muted-foreground",
-              )}
-            >
-              <Page
-                pageNumber={p}
-                height={Math.max(1, height - 66)}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                loading={null}
-                onLoadSuccess={(page) => {
-                  const vp = page.getViewport({ scale: 1 });
-                  handlePageLoad(p, vp.width, vp.height);
-                }}
-              />
-              {hasAnnotations && dim && (
-                <ThumbnailAnnotations
-                  strokes={strokes}
-                  pageW={dim.w}
-                  pageH={dim.h}
-                  thumbH={Math.max(1, height - 66)}
-                />
-              )}
-              <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-sm bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {p} / {numPages}
-              </span>
-            </button>
-          );
-        })}
+        {Array.from({ length: numPages }, (_, i) => i + 1).map((p) => (
+          <CarouselItem
+            key={p}
+            pageNumber={p}
+            numPages={numPages}
+            isActive={p === currentPage}
+            thumbHeight={thumbHeight}
+            strokes={strokesByPage[p]}
+            dim={pageDims[p]}
+            onSelect={onSelect}
+            onLoadDims={handleLoadDims}
+          />
+        ))}
       </div>
     </div>
   );
@@ -191,13 +233,10 @@ function ThumbnailAnnotations({
     drawThumbnailAnnotations(canvas, strokes, pageW, pageH, thumbH);
   }, [strokes, pageW, pageH, thumbH]);
 
-  const thumbW = (pageW / pageH) * thumbH;
-
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none absolute inset-0"
-      style={{ width: thumbW, height: thumbH }}
+      className="pointer-events-none absolute inset-0 h-full w-full"
     />
   );
 }

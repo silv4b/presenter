@@ -46,6 +46,7 @@ function PresenterShell() {
     isPresenting,
     isSingleMonitor,
     blackScreen,
+    whiteScreen,
     error,
     setError,
     toggleTool,
@@ -56,17 +57,18 @@ function PresenterShell() {
     startPresentation,
     stopPresentation,
     toggleBlackScreen,
+    toggleWhiteScreen,
     closeDocument,
     openPdf,
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
-  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout } = useSettings();
+  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout, theme, setTheme } = useSettings();
 
-const MIN_PREVIEW = 320;
-const MAX_PREVIEW = 512;
-const SIDEBAR_WIDTH = 320; // w-80 = 320px
-const [previewWidth, setPreviewWidth] = useState(() => {
+  const MIN_PREVIEW = 320;
+  const MAX_PREVIEW = 512;
+  const SIDEBAR_WIDTH = 320; // w-80 = 320px
+  const [previewWidth, setPreviewWidth] = useState(() => {
     const saved = Number(localStorage.getItem(PREVIEW_WIDTH_KEY));
     if (Number.isFinite(saved)) {
       return Math.min(MAX_PREVIEW, Math.max(MIN_PREVIEW, saved));
@@ -189,6 +191,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
     startPresentation,
     stopPresentation,
     toggleBlackScreen,
+    toggleWhiteScreen,
     toggleTool,
     undo: annotations.undo,
     redo: annotations.redo,
@@ -270,6 +273,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
           </Document>
 
           {blackScreen && <div className="absolute inset-0 z-10 bg-black" />}
+          {whiteScreen && <div className="absolute inset-0 z-10 bg-white" />}
 
           <FloatingControls visible={controlsVisible} onStopPresentation={() => setConfirmExitOpen(true)} />
         </div>
@@ -283,7 +287,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
                 onClick={() => setShowSidebar(true)}
                 aria-label="Mostrar sidebar"
                 title="Mostrar sidebar (B)"
-                className="absolute left-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent"
+                className="absolute left-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent cursor-pointer"
               >
                 <PanelLeftOpen className="size-4" />
               </button>
@@ -345,7 +349,7 @@ const [previewWidth, setPreviewWidth] = useState(() => {
                     onClick={() => setShowPreview(true)}
                     aria-label="Mostrar preview"
                     title="Mostrar preview"
-                    className="absolute right-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent"
+                    className="absolute right-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent cursor-pointer"
                   >
                     <PanelRightOpen className="size-4" />
                   </button>
@@ -374,6 +378,8 @@ const [previewWidth, setPreviewWidth] = useState(() => {
         onAlwaysShowFloatingControlsChange={setAlwaysShowFloatingControls}
         floatingControlsTimeout={floatingControlsTimeout}
         onFloatingControlsTimeoutChange={setFloatingControlsTimeout}
+        theme={theme}
+        onThemeChange={setTheme}
       />
 
       <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>
@@ -385,8 +391,8 @@ const [previewWidth, setPreviewWidth] = useState(() => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void stopPresentation()}>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="cursor-pointer" onClick={() => void stopPresentation()}>
               Encerrar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -404,8 +410,8 @@ const [previewWidth, setPreviewWidth] = useState(() => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setClosePending(false)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void handleAppClose()}>
+            <AlertDialogCancel className="cursor-pointer" onClick={() => setClosePending(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="cursor-pointer" onClick={() => void handleAppClose()}>
               Fechar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -421,8 +427,8 @@ const [previewWidth, setPreviewWidth] = useState(() => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setCloseDocPending(false); closeDocument(); }}>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="cursor-pointer" onClick={() => { setCloseDocPending(false); closeDocument(); }}>
               Voltar
             </AlertDialogAction>
           </AlertDialogFooter>
