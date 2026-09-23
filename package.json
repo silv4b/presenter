@@ -1,7 +1,7 @@
 {
   "name": "presenter",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Aplicativo desktop de apresentação de PDFs",
   "author": "Bruno Silva",
   "license": "MIT",
