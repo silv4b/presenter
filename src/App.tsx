@@ -63,7 +63,7 @@ function PresenterShell() {
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
-  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout } = useSettings();
+  const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout, theme, setTheme } = useSettings();
 
   const MIN_PREVIEW = 320;
   const MAX_PREVIEW = 512;
@@ -378,6 +378,8 @@ function PresenterShell() {
         onAlwaysShowFloatingControlsChange={setAlwaysShowFloatingControls}
         floatingControlsTimeout={floatingControlsTimeout}
         onFloatingControlsTimeoutChange={setFloatingControlsTimeout}
+        theme={theme}
+        onThemeChange={setTheme}
       />
 
       <AlertDialog open={confirmExitOpen} onOpenChange={setConfirmExitOpen}>

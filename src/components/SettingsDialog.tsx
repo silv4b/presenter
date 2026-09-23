@@ -18,6 +18,8 @@ interface SettingsDialogProps {
   onAlwaysShowFloatingControlsChange: (value: boolean) => void;
   floatingControlsTimeout: number;
   onFloatingControlsTimeoutChange: (value: number) => void;
+  theme: "light" | "dark";
+  onThemeChange: (theme: "light" | "dark") => void;
 }
 
 export function SettingsDialog({
@@ -29,6 +31,8 @@ export function SettingsDialog({
   onAlwaysShowFloatingControlsChange,
   floatingControlsTimeout,
   onFloatingControlsTimeoutChange,
+  theme,
+  onThemeChange,
 }: SettingsDialogProps) {
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
@@ -142,6 +146,34 @@ export function SettingsDialog({
                 />
               </div>
             )}
+          </div>
+
+          <div className="h-px bg-border" />
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">Tema</span>
+              <p className="text-xs text-muted-foreground">
+                Alterna entre tema claro e escuro.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={theme === "dark"}
+              onClick={() => onThemeChange(theme === "light" ? "dark" : "light")}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                theme === "dark" ? "bg-primary" : "bg-input",
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                  theme === "dark" ? "translate-x-4" : "translate-x-0.5",
+                )}
+              />
+            </button>
           </div>
 
           <div className="h-px bg-border" />
