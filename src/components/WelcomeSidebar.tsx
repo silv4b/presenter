@@ -41,7 +41,7 @@ export function WelcomeSidebar() {
 
   return (
     <>
-      <div className="flex h-full w-80 flex-col border-l border-border bg-card/50 p-4">
+      <div className="flex h-full w-80 flex-col border-l border-sidebar-border bg-sidebar/50 p-4">
         <div className="mb-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
           <div className="flex items-center gap-2">
             <Clock className="size-4" />
@@ -68,7 +68,7 @@ export function WelcomeSidebar() {
             history.map((entry) => (
               <div
                 key={entry.path}
-                className="group flex items-center gap-2 rounded-md py-1.5 text-left text-sm transition-colors hover:bg-muted cursor-pointer"
+                className="group flex items-center gap-2 rounded-md py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent cursor-pointer"
               >
                 <button
                   onClick={() => handleClick(entry)}
