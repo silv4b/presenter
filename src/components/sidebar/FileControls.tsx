@@ -10,8 +10,8 @@ export function FileControls() {
     <>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="secondary" onClick={openPdf} className="w-full cursor-pointer">
-            <FolderOpen className="size-4 cursor-pointer" />
+          <Button variant="outline" onClick={openPdf} className="w-full cursor-pointer">
+            <FolderOpen className="size-4" />
             Abrir PDF
           </Button>
         </TooltipTrigger>
