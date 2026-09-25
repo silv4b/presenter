@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, RotateCcw, Timer as TimerIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePresentation } from "@/state/presentation";
 
 type Mode = "stopwatch" | "countdown";
 
@@ -30,6 +31,8 @@ function format(ms: number): { parts: string[] } {
 }
 
 export function Timer() {
+  const { registerTimerFunctions } = usePresentation();
+
   const [mode, setMode] = useState<Mode>("stopwatch");
   const [running, setRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -40,6 +43,16 @@ export function Timer() {
   const baseMsRef = useRef(0);
   const inputRefs = useRef<Array<HTMLInputElement | null>>(new Array(8).fill(null));
   const isEditingRef = useRef(false);
+
+  useEffect(() => {
+    registerTimerFunctions(() => setRunning((r) => !r), () => {
+      setRunning(false);
+      setActiveIndex(null);
+      baseMsRef.current = 0;
+      setElapsedMs(0);
+      setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
+    });
+  }, [registerTimerFunctions]);
 
   // Sync digits from elapsedMs when not editing
   useEffect(() => {

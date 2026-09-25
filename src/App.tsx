@@ -60,6 +60,8 @@ function PresenterShell() {
     toggleWhiteScreen,
     closeDocument,
     openPdf,
+    toggleTimer,
+    resetTimer,
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
@@ -206,6 +208,8 @@ function PresenterShell() {
     toggleSidebar: () => setShowSidebar((v) => !v),
     togglePreview: () => setShowPreview((v) => !v),
     toggleCarousel: () => setShowCarousel((v) => !v),
+    toggleTimer,
+    resetTimer,
   });
 
   const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);

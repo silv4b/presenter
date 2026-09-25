@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -59,6 +60,9 @@ interface PresentationContextValue {
   activeTool: AnnotationTool | null;
   toggleTool: (tool: AnnotationTool) => void;
   setError: (error: string | null) => void;
+  toggleTimer: () => void;
+  resetTimer: () => void;
+  registerTimerFunctions: (toggle: () => void, reset: () => void) => void;
 }
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);
@@ -78,6 +82,22 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
   const [notesByPage, setNotesByPage] = useState<Record<number, string[]>>({});
+
+  const timerToggleRef = useRef<(() => void) | null>(null);
+  const timerResetRef = useRef<(() => void) | null>(null);
+
+  const registerTimerFunctions = useCallback((toggle: () => void, reset: () => void) => {
+    timerToggleRef.current = toggle;
+    timerResetRef.current = reset;
+  }, []);
+
+  const toggleTimer = useCallback(() => {
+    timerToggleRef.current?.();
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    timerResetRef.current?.();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -299,6 +319,9 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       activeTool,
       toggleTool,
       setError,
+      registerTimerFunctions,
+      toggleTimer,
+      resetTimer,
     }),
     [
       docPath,
@@ -330,6 +353,9 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       activeTool,
       toggleTool,
       setError,
+      registerTimerFunctions,
+      toggleTimer,
+      resetTimer,
     ],
   );
 
