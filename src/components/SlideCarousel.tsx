@@ -73,16 +73,16 @@ const CarouselItem = memo(function CarouselItem({
       onClick={() => onSelect(pageNumber)}
       title={`Ir para o slide ${pageNumber}`}
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-sm border-2 py-1 transition-colors cursor-pointer",
+        "relative shrink-0 overflow-hidden rounded-md border transition-colors cursor-pointer",
         isActive
           ? "border-primary"
-          : "border-transparent hover:border-muted-foreground",
+          : "border-border hover:border-muted-foreground",
       )}
     >
-      <div className="relative" style={thumbW ? { width: thumbW } : undefined}>
+      <div className="relative h-full" style={thumbW ? { width: thumbW } : undefined}>
         <Page
           pageNumber={pageNumber}
-          height={thumbHeight}
+          height={thumbHeight - 2}
           renderTextLayer={false}
           renderAnnotationLayer={false}
           loading={null}
@@ -93,7 +93,7 @@ const CarouselItem = memo(function CarouselItem({
             strokes={strokes}
             pageW={dim.w}
             pageH={dim.h}
-            thumbH={thumbHeight}
+            thumbH={thumbHeight - 2}
           />
         )}
       </div>
