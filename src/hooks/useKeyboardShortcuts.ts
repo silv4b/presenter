@@ -26,6 +26,8 @@ interface UseKeyboardShortcutsOptions {
   toggleSidebar?: () => void;
   togglePreview?: () => void;
   toggleCarousel?: () => void;
+  toggleTimer?: () => void;
+  resetTimer?: () => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
@@ -105,6 +107,16 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
         case "c": case "C":
           if (!isInput && o.toggleCarousel) {
             e.preventDefault(); o.toggleCarousel();
+          }
+          break;
+        case "F1":
+          if (!isInput && o.toggleTimer) {
+            e.preventDefault(); o.toggleTimer();
+          }
+          break;
+        case "F2":
+          if (!isInput && o.resetTimer) {
+            e.preventDefault(); o.resetTimer();
           }
           break;
         case "l": case "L":

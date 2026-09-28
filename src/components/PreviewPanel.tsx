@@ -51,7 +51,7 @@ export function PreviewPanel({
       </div>
       <aside
         style={{ width }}
-        className="flex shrink-0 flex-col gap-3 border-l border-border bg-card p-4"
+        className="flex shrink-0 flex-col gap-3 border-l border-sidebar-border bg-sidebar/50 p-4"
       >
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

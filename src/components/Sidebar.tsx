@@ -22,7 +22,7 @@ export function Sidebar({ onClose, width, show }: SidebarProps) {
     >
       <aside
         className={cn(
-          "flex shrink-0 h-full flex-col gap-4 border-r border-border bg-card p-4 transition-transform duration-300 ease-in-out",
+          "flex shrink-0 h-full flex-col gap-4 border-r border-sidebar-border bg-sidebar/50 p-4 transition-transform duration-300 ease-in-out",
           show ? "translate-x-0" : "-translate-x-full",
         )}
         style={{ width }}
