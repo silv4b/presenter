@@ -134,7 +134,7 @@ export function AnnotationToolbar() {
                 <Redo2 className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">Refazer (Ctrl+Shift+Z)</TooltipContent>
+            <TooltipContent side="top">Refazer (Ctrl+Y)</TooltipContent>
           </Tooltip>
           <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">&nbsp;</span>
         </div>

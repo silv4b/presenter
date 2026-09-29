@@ -151,7 +151,7 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
         <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">
           <Undo2 className="size-3.5" />
         </Button>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)">
           <Redo2 className="size-3.5" />
         </Button>
       </div>

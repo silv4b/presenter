@@ -49,7 +49,7 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
       const tag = (e.target as HTMLElement)?.tagName;
       const isInput = tag === "INPUT" || tag === "TEXTAREA";
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault(); o.undo(); return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "y") {
