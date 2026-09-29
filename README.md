@@ -74,51 +74,43 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 
 ## Arquitetura
 
-- `src/` — frontend React/TypeScript
-  - `src/state/presentation.tsx` — estado global (Context), navegação de slides, seleção multi-monitor, zoom
-  - `src/state/annotations/` — estado de anotações (provider + contexto compartilhado)
-    - `presenter.tsx` — hook principal do apresentador (strokes, undo/redo, emit de eventos)
-    - `viewscreen.ts` — hook read-only da janela de projeção (escuta eventos)
-    - `index.ts` — barrel re-export
-  - `src/components/` — UI
-    - `Sidebar.tsx` — orquestrador da sidebar (decompõe nos sub-componentes abaixo)
-    - `sidebar/FileControls.tsx` — abertura de PDF, nome do documento, voltar ao início
-    - `sidebar/MonitorSelector.tsx` — seleção multi-monitor com checkboxes
-    - `sidebar/PresentationControls.tsx` — iniciar/encerrar apresentação, tela preta
-    - `sidebar/SlideNavigation.tsx` — navegação prev/next e input de página
-    - `sidebar/AnnotationToolbar.tsx` — botões de ferramentas com tamanhos + undo/redo/reset
-    - `PdfStage.tsx` — renderizador de página com zoom (CSS transform) e pan (Space+drag)
-    - `AnnotationLayer.tsx` — canvas de anotações (caneta, marcador, laser, borracha)
-    - `AnnotationLayerContainer.tsx` — wrapper que conecta AnnotationLayer ao contexto
-    - `ColorPicker.tsx` — paleta de cores com 6 presets, HexColorPicker e input hex
-    - `FloatingControls.tsx` — controles flutuantes no modo tela cheia (navegação + ferramentas)
-    - `PreviewPanel.tsx` — sidebar direita com preview do próximo slide + exportação + configurações
-    - `SettingsDialog.tsx` — dialog de configurações (cor de fundo, auto-hide, timeout)
-    - `SlideCarousel.tsx` — filmstrip de miniaturas com anotações e altura ajustável
-    - `NextPreview.tsx` — preview do próximo slide
-    - `Timer.tsx` — cronômetro progressivo/regressivo
-    - `Welcome.tsx` — tela inicial com drag-and-drop e atalhos
-    - `WelcomeSidebar.tsx` — sidebar de histórico de arquivos recentes com menu de opções
-  - `src/viewscreen/` — janela de projeção (instância secundária)
-  - `src/hooks/` — hooks customizados
-    - `useKeyboardShortcuts.ts` — atalhos de teclado globais
-    - `useAutoHide.ts` — auto-hide para controles flutuantes
-    - `useSettings.ts` — configurações persistidas (backgroundColor, auto-hide, timeout)
-  - `src/lib/` — helpers
-    - `pdf.ts` — leitura de PDF e comandos Rust (read_pdf, set_document, get_document, file_exists)
-    - `monitors.ts` — detecção de monitores, config persistida e comandos de projeção
-    - `annotations.ts` — tipos, constantes e utilidades de anotações (distâncias, eraser logic)
-    - `canvasDrawing.ts` — funções de desenho compartilhadas (drawStrokes, drawLaser, drawEraserCursor, drawToolCursor)
-    - `exportPdf.ts` — exportação de PDF com anotações incorporadas
-    - `fileHistory.ts` — histórico de arquivos abertos (localStorage)
-    - `utils.ts` — utilitários gerais (cn para classnames)
-    - `shared.ts` — constantes de eventos e interfaces compartilhadas
-- `src-tauri/` — backend Rust
-  - `src/lib.rs` — comandos (`read_pdf`, `file_exists`, `set_document`, `get_document`, `list_monitors`, `open_projections`, `close_projection`, `save_file`, etc.) e ícone embutido
-  - `capabilities/default.json` — permissões das janelas
-  - `tauri.conf.json` — configuração do app e janelas
+O projeto segue uma arquitetura inspirada em MVC com separação clara entre estado global, lógica de negócio, componentes de UI e backend Rust.
 
-A sincronização entre janelas usa os eventos globais do Tauri: `mudar-slide` (troca de página), `tela-preta` (blackout), `anotacao-sincronizar` (undo/redo), `anotacao-limpar-pagina` (borracha duplo-clique) e eventos de anotações (`anotacao-traco`, `anotacao-laser`, `anotacao-apagar`, `anotacao-limpar`). As janelas de projeção são criadas/posicionadas/fechadas por comandos Rust (`open_projections` / `close_projection`), que as movem para os monitores escolhidos e ativam o modo tela cheia.
+```text
+presenter/
+├── src/                           # Frontend React/TypeScript
+│   ├── state/                     # Camada de estado global (Context API)
+│   │   ├── annotations/           # Estado de anotações (provider + contexto compartilhado)
+│   ├── components/                # UI Components
+│   │   ├── sidebar/
+│   │   └── ui/                    # Componentes base (shadcn/ui / Radix UI)
+│   ├── viewscreen/                # Janela de projeção (instância secundária)
+│   ├── hooks/                     # Hooks customizados
+│   └── lib/                       # Helpers & utilitários
+├── src-tauri/                     # Backend Rust
+│   ├── src/
+│   ├── capabilities/default.json  # Permissões janelas
+│   ├── tauri.conf.json            # Config app + janelas
+│   └── icons/                     # Ícones multi-resolução/plataforma
+├── scripts/
+├── docs/                          # Documentação adicional
+├── tests/                         # Testes automatizados (futuro)
+├── .github/workflows/             # CI/CD GitHub Actions
+├── src/assets/                    # Assets estáticos
+├── .github/
+├── .vscode/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vite.config.ts
+└── components.json                # Config shadcn/ui
+```
+
+A separação clara entre `state/` (estado global), `components/` (UI), `hooks/` (lógica reutilizável), `lib/` (helpers puros) e `src-tauri/` (backend) facilita manutenção, testes e escalabilidade.
 
 ## Como executar
 

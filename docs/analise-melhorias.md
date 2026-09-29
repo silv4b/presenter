@@ -97,7 +97,7 @@ Adicionar um palette de cores predefinidas ou um color picker.
 Implementado em `ColorPicker.tsx` com 6 cores predefinidas,
 HexColorPicker para cores customizadas, e input hex.
 
-### A7. Indicador de página na projeção
+### A7. Indicador de página na projeção ✅
 
 **Complexidade:** Baixa
 
