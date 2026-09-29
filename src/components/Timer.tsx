@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Pause, Play, RotateCcw, Timer as TimerIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePresentation } from "@/state/presentation";
@@ -31,28 +32,47 @@ function format(ms: number): { parts: string[] } {
 }
 
 export function Timer() {
-  const { registerTimerFunctions } = usePresentation();
+  const {
+    registerTimerFunctions,
+    timerMode: mode,
+    setTimerMode: setMode,
+    timerInitialTime,
+    setTimerInitialTime,
+  } = usePresentation();
 
-  const [mode, setMode] = useState<Mode>("stopwatch");
   const [running, setRunning] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [digits, setDigits] = useState<string[]>(["0", "0", "0", "0", "0", "0", "0", "0"]);
+  const [elapsedMs, setElapsedMs] = useState(timerInitialTime);
+  const [digits, setDigits] = useState<string[]>(() =>
+    format(timerInitialTime).parts.flatMap((p) => p.split("")),
+  );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
-  const baseMsRef = useRef(0);
+  const baseMsRef = useRef(timerInitialTime);
   const inputRefs = useRef<Array<HTMLInputElement | null>>(new Array(8).fill(null));
   const isEditingRef = useRef(false);
 
+  const reset = useCallback(() => {
+    setRunning(false);
+    setActiveIndex(null);
+    isEditingRef.current = false;
+    baseMsRef.current = timerInitialTime;
+    setElapsedMs(timerInitialTime);
+    setDigits(format(timerInitialTime).parts.flatMap((p) => p.split("")));
+  }, [timerInitialTime]);
+
   useEffect(() => {
-    registerTimerFunctions(() => setRunning((r) => !r), () => {
-      setRunning(false);
-      setActiveIndex(null);
-      baseMsRef.current = 0;
-      setElapsedMs(0);
-      setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
-    });
-  }, [registerTimerFunctions]);
+    registerTimerFunctions(() => setRunning((r) => !r), reset);
+  }, [registerTimerFunctions, reset]);
+
+  // Reflect external changes (e.g. Settings dialog) when idle
+  useEffect(() => {
+    if (running || activeIndex !== null) return;
+    if (timerInitialTime === baseMsRef.current) return;
+    baseMsRef.current = timerInitialTime;
+    setElapsedMs(timerInitialTime);
+    setDigits(format(timerInitialTime).parts.flatMap((p) => p.split("")));
+  }, [timerInitialTime, running, activeIndex]);
 
   // Sync digits from elapsedMs when not editing
   useEffect(() => {
@@ -145,15 +165,6 @@ export function Timer() {
     };
   }, [running, mode]);
 
-  const reset = () => {
-    setRunning(false);
-    setActiveIndex(null);
-    isEditingRef.current = false;
-    baseMsRef.current = 0;
-    setElapsedMs(0);
-    setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
-  };
-
   const switchMode = (next: Mode) => {
     setRunning(false);
     setActiveIndex(null);
@@ -187,6 +198,7 @@ export function Timer() {
     const totalMs = (h * 3600 + m * 60 + s) * 1000 + cc * 10;
     baseMsRef.current = totalMs;
     setElapsedMs(totalMs);
+    setTimerInitialTime(totalMs);
   };
 
   const handleDigitChange = (index: number, value: string) => {
@@ -266,6 +278,7 @@ export function Timer() {
     const totalMs = (h * 3600 + m * 60 + s) * 1000 + cc * 10;
     baseMsRef.current = totalMs;
     setElapsedMs(totalMs);
+    setTimerInitialTime(totalMs);
     setActiveIndex(null);
     isEditingRef.current = false;
   };
@@ -352,23 +365,18 @@ export function Timer() {
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => switchMode("stopwatch")}
-          className={cn(mode === "stopwatch" && "bg-muted", "cursor-pointer")}
-        >
-          Progressivo
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => switchMode("countdown")}
-          className={cn(mode === "countdown" && "bg-muted", "cursor-pointer")}
-        >
-          Regressivo
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-medium text-foreground">Regressivo</span>
+          <span className="text-[0.7rem] text-muted-foreground">
+            {mode === "countdown" ? "Conta até zero" : "Conta a partir de zero"}
+          </span>
+        </div>
+        <Switch
+          checked={mode === "countdown"}
+          onCheckedChange={(checked) => switchMode(checked ? "countdown" : "stopwatch")}
+          aria-label="Alternar modo regressivo"
+        />
       </div>
 
       <div className="flex items-center gap-1">

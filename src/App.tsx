@@ -62,6 +62,7 @@ function PresenterShell() {
     openPdf,
     toggleTimer,
     resetTimer,
+    registerZoomReset,
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
@@ -200,6 +201,7 @@ function PresenterShell() {
     zoomIn: handleZoomIn,
     zoomOut: handleZoomOut,
     zoomReset: handleZoomReset,
+    registerZoomReset,
     onEscape: () => {
       if (isPresenting) setConfirmExitOpen(true);
       else if (docDataUrl) setCloseDocPending(true);

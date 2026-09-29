@@ -63,6 +63,12 @@ interface PresentationContextValue {
   toggleTimer: () => void;
   resetTimer: () => void;
   registerTimerFunctions: (toggle: () => void, reset: () => void) => void;
+  registerZoomReset: (reset: () => void) => void;
+  resetZoom: () => void;
+  timerMode: "stopwatch" | "countdown";
+  setTimerMode: (mode: "stopwatch" | "countdown") => void;
+  timerInitialTime: number; // in milliseconds
+  setTimerInitialTime: (ms: number) => void;
 }
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);
@@ -82,13 +88,20 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
   const [notesByPage, setNotesByPage] = useState<Record<number, string[]>>({});
+  const [timerMode, setTimerMode] = useState<"stopwatch" | "countdown">("stopwatch");
+  const [timerInitialTime, setTimerInitialTime] = useState<number>(0); // milliseconds
 
   const timerToggleRef = useRef<(() => void) | null>(null);
   const timerResetRef = useRef<(() => void) | null>(null);
+  const zoomResetRef = useRef<(() => void) | null>(null);
 
   const registerTimerFunctions = useCallback((toggle: () => void, reset: () => void) => {
     timerToggleRef.current = toggle;
     timerResetRef.current = reset;
+  }, []);
+
+  const registerZoomReset = useCallback((reset: () => void) => {
+    zoomResetRef.current = reset;
   }, []);
 
   const toggleTimer = useCallback(() => {
@@ -97,6 +110,10 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
 
   const resetTimer = useCallback(() => {
     timerResetRef.current?.();
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    zoomResetRef.current?.();
   }, []);
 
   useEffect(() => {
@@ -205,8 +222,9 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       if (docPath) {
         setDocument(docPath, docName ?? "", clamped).catch(() => {});
       }
+      resetZoom();
     },
-    [numPages, docPath, docName],
+    [numPages, docPath, docName, resetZoom],
   );
 
   const nextPage = useCallback(() => {
@@ -322,6 +340,12 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       registerTimerFunctions,
       toggleTimer,
       resetTimer,
+      registerZoomReset,
+      resetZoom,
+      timerMode,
+      setTimerMode,
+      timerInitialTime,
+      setTimerInitialTime,
     }),
     [
       docPath,
@@ -356,6 +380,12 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
       registerTimerFunctions,
       toggleTimer,
       resetTimer,
+      registerZoomReset,
+      resetZoom,
+      timerMode,
+      setTimerMode,
+      timerInitialTime,
+      setTimerInitialTime,
     ],
   );
 

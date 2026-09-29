@@ -28,11 +28,18 @@ interface UseKeyboardShortcutsOptions {
   toggleCarousel?: () => void;
   toggleTimer?: () => void;
   resetTimer?: () => void;
+  registerZoomReset?: (reset: () => void) => void;
 }
 
 export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
   const optsRef = useRef(opts);
   optsRef.current = opts;
+
+  useEffect(() => {
+    if (opts.registerZoomReset && opts.zoomReset) {
+      opts.registerZoomReset(opts.zoomReset);
+    }
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -42,11 +49,8 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
       const tag = (e.target as HTMLElement)?.tagName;
       const isInput = tag === "INPUT" || tag === "TEXTAREA";
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault(); o.undo(); return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
-        e.preventDefault(); o.redo(); return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "y") {
         e.preventDefault(); o.redo(); return;
@@ -62,10 +66,16 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
       }
 
       switch (e.key) {
-        case "ArrowRight": case "ArrowDown": case "PageDown":
+        case "ArrowRight": case "PageDown":
           e.preventDefault(); o.nextPage(); break;
-        case "ArrowLeft": case "ArrowUp": case "PageUp":
+        case "ArrowLeft": case "PageUp":
           e.preventDefault(); o.prevPage(); break;
+        case "ArrowDown":
+          if (!isInput) { e.preventDefault(); o.zoomOut(); }
+          break;
+        case "ArrowUp":
+          if (!isInput) { e.preventDefault(); o.zoomIn(); }
+          break;
         case " ":
           if (o.zoom <= 1) { e.preventDefault(); o.nextPage(); }
           break;
