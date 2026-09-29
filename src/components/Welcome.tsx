@@ -7,17 +7,20 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 const shortcuts: [string, string][] = [
   ["F5", "Iniciar / encerrar apresentação"],
-  ["O", "Abrir PDF"],
-  ["→ / Espaço", "Próximo slide"],
-  ["←", "Slide anterior"],
-  ["B", "Tela preta"],
-  ["Home / End", "Primeiro / último slide"],
+  ["O", "Abrir PDF (tela inicial)"],
+  ["→ / Espaço / PageDown", "Próximo slide"],
+  ["← / PageUp", "Slide anterior"],
+  ["↑ / ↓", "Zoom in / Zoom out"],
+  ["Home / End", "Primeiro slide / Último slide"],
+  ["B / W", "Tela preta / Tela branca (durante apresentação)"],
+  ["Esc", "Encerrar apresentação / Voltar ao início"],
   ["L / P / H / E", "Laser / Caneta / Marcador / Borracha"],
-  ["Ctrl+Z / Ctrl+Shift+Z", "Desfazer / Refazer"],
-  ["Ctrl+= / Ctrl− / Ctrl0", "Zoom in / out / resetar"],
+  ["Ctrl+= / Ctrl+− / Ctrl+0", "Zoom in / Zoom out / Resetar zoom"],
+  ["Ctrl+Z / Ctrl+Y", "Desfazer / Refazer"],
+  ["F1 / F2", "Iniciar & Pausar / Zerar cronômetro"],
   ["Z", "Mostrar/Ocultar Sidebar Esquerda"],
-  ["X", "Mostrar/Ocultar Sidebar Direita"],
-  ["C", "Mostrar/Ocultar Carrousel"]
+  ["X", "Mostrar/Ocultar Sidebar Direita (Preview)"],
+  ["C", "Mostrar/Ocultar Carrossel"],
 ];
 
 export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
@@ -55,7 +58,7 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
 
       {/* Main content */}
       <div
-        className="relative flex flex-1 flex-col items-center justify-center gap-8 p-8"
+        className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-8 p-8 overflow-y-auto thin-scrollbar"
         onDragOver={(e) => e.preventDefault()}
       >
         {/* Drag overlay */}
@@ -91,15 +94,15 @@ export function Welcome({ onOpenSettings }: { onOpenSettings?: () => void }) {
           Abrir PDF
         </Button>
 
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-          <div className="flex justify-center gap-2 text-xs font-medium text-muted-foreground w-90 pb-4">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4 w-130">
+          <div className="flex justify-center gap-2 text-sm font-medium text-muted-foreground pb-4">
             <Keyboard className="size-4" />
             Atalhos de teclado
           </div>
           <div className="flex flex-col gap-2">
             {shortcuts.map(([key, label]) => (
-              <div key={key} className="flex items-center justify-between gap-6 text-xs">
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+              <div key={key} className="flex items-center justify-between gap-6 text-sm">
+                <kbd className="rounded border border-border bg-muted px-2 py-1 font-mono text-[11px]">
                   {key}
                 </kbd>
                 <span className="text-muted-foreground">{label}</span>

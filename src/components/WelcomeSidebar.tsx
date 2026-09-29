@@ -59,7 +59,7 @@ export function WelcomeSidebar() {
             </Button>
           )}
         </div>
-        <div className="flex flex-1 flex-col gap-1 overflow-y-auto">
+        <div className="flex flex-1 flex-col gap-1 overflow-y-auto thin-scrollbar">
           {history.length === 0 ? (
             <p className="py-8 text-center text-xs text-muted-foreground">
               Nenhum arquivo no histórico
