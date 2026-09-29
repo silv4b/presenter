@@ -204,6 +204,8 @@ export function SettingsDialog({
             </button>
           </div>
 
+          <div className="h-px bg-border" />
+
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-0.5">
               <span className={cn("text-sm font-medium", alwaysShowFloatingControls && "text-muted-foreground")}>
