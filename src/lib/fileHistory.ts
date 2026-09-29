@@ -1,5 +1,5 @@
 const STORAGE_KEY = "presenter-file-history";
-const MAX_HISTORY = 20;
+const MAX_HISTORY = 100;
 
 export interface HistoryEntry {
   path: string;
