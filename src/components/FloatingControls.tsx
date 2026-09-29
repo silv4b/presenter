@@ -4,6 +4,7 @@ import { usePresenterAnnotations } from "@/state/annotations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "@/components/ColorPicker";
+import { FloatingTimer } from "@/components/FloatingTimer";
 import {
   ChevronLeft,
   ChevronRight,
@@ -32,6 +33,7 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     toggleTool,
     nextPage,
     prevPage,
+    isSingleMonitor,
   } = usePresentation();
 
   const {
@@ -73,26 +75,37 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
 
   return (
     <>
-      {/* Navigation */}
+      {/* Bottom area: navigation and timer are separate floating cards, centered as a row */}
       <div
         className={cn(
-          "absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm transition-opacity duration-300",
-          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+          "pointer-events-none absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 transition-opacity duration-300",
+          visible ? "opacity-100" : "opacity-0",
         )}
       >
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={prevPage} disabled={currentPage <= 1}>
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="min-w-16 px-1 text-center text-xs font-medium text-white/80 tabular-nums">
-          {currentPage} / {numPages}
-        </span>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={nextPage} disabled={currentPage >= numPages}>
-          <ChevronRight className="size-4" />
-        </Button>
-        <div className="mx-1 h-5 w-px bg-white/20" />
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40 cursor-pointer" onClick={onStopPresentation} title="Encerrar apresentação (Esc)">
-          <Square className="size-3.5" />
-        </Button>
+        {/* Navigation controls */}
+        <div
+          className={cn(
+            "pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm",
+            !visible && "pointer-events-none",
+          )}
+        >
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={prevPage} disabled={currentPage <= 1}>
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="min-w-16 px-1 text-center text-xs font-medium text-white/80 tabular-nums">
+            {currentPage} / {numPages}
+          </span>
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={nextPage} disabled={currentPage >= numPages}>
+            <ChevronRight className="size-4" />
+          </Button>
+          <div className="mx-1 h-5 w-px bg-white/20" />
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40 cursor-pointer" onClick={onStopPresentation} title="Encerrar apresentação (Esc)">
+            <Square className="size-3.5" />
+          </Button>
+        </div>
+
+        {/* Timer for single-monitor mode */}
+        {isSingleMonitor && <FloatingTimer />}
       </div>
 
       {/* Color picker + Annotation tools */}
