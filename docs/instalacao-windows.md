@@ -24,15 +24,9 @@ Se o PowerShell 5.1 estiver desabilitado por política da empresa, instale o
 irm https://raw.githubusercontent.com/silv4b/presenter/develop/install.ps1 | iex
 ```
 
-`irm` é o apelido de `Invoke-RestMethod` e `iex` o de `Invoke-Expression`. O
-Windows pedirá confirmação de administrador (UAC) para instalar.
-
-Quem preferir copiar e colar numa janela do PowerShell aberta como
-**Administrador**:
-
-```powershell
-irm https://raw.githubusercontent.com/silv4b/presenter/develop/install.ps1 | iex
-```
+`irm` é o apelido de `Invoke-RestMethod` e `iex` o de `Invoke-Expression`. A
+instalação é feita no modo **por usuário**, então não é preciso abrir o
+PowerShell como administrador e o Windows não pede confirmação de UAC.
 
 ## O que acontece
 
@@ -92,25 +86,29 @@ instalada.
 
 **Configurações → Aplicativos → Presenter → Desinstalar.**
 
-Pelo terminal:
+Pelo terminal, com o desinstalador que o próprio instalador deixou:
 
 ```powershell
-# Pelo produto empacotado
-winget uninstall presenter
+# Instalação por usuário (padrão)
+& "$env:LOCALAPPDATA\presenter\uninstall.exe" /S
 
-# Ou removendo o MSI direto
-msiexec /x "C:\Program Files\presenter\uninstall.exe"
+# Instalação por máquina, se foi feita assim
+& "C:\Program Files\presenter\uninstall.exe" /S
 ```
+
+> Como o Presenter ainda não está no catálogo do `winget`, o
+> `winget uninstall presenter` não encontra o app.
 
 ## Notas
 
-- **Acesso de administrador:** o instalador precisa de privilégio elevado para
-  criar atalhos no Menu Iniciar e chaves de registro. Se o script não estiver
-  rodando como administrador, ele se reinvoca sozinho via UAC.
+- **Acesso de administrador:** não é necessário. O instalador é do modo por
+  usuário, gravando em `%LOCALAPPDATA%\presenter` e criando o atalho apenas
+  para o usuário atual. Se o instalador falhar com erro de permissão, repita o
+  comando num PowerShell aberto como administrador.
 - **Rate limit da API:** a API pública do GitHub permite 60 requisições por hora
   por IP. Se encontrar `403`, defina `$env:GITHUB_TOKEN` antes de rodar o comando.
 - **Política de execução:** `irm | iex` não é bloqueada pela Execution Policy
-  (ela só se aplica a arquivos `.ps1`). baixando o arquivo e executando
+  (ela só se aplica a arquivos `.ps1`). Baixando o arquivo e executando
   `./install.ps1`, pode ser necessário `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 - **Download truncado:** o script compara o tamanho obtido com o informado pela
   API e aborta se divergirem.

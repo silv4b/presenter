@@ -289,5 +289,5 @@ Motivos:
 | Chave privada vazada | Usar GitHub Secrets, nunca commitar |
 | Endpoint offline | Usar múltiplos endpoints (fallback) |
 | Update quebrado | Testar fluxo completo antes de publicar |
-| Usuário com Windows sem permissão | NSIS pede UAC elevation |
+| Instalação negada por falta de permissão | NSIS é por usuário (`currentUser`); se falhar, repetir como administrador |
 | Internet lenta | Mostrar progresso do download |
