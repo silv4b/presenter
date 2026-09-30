@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/silv4b/presenter/develop/install.sh
 
 O script exibe um resumo da detecção antes de instalar:
 
-```
+```text
 Presenter v1.3.0
   distribuição: Ubuntu 24.04.5 LTS
   família:      debian
@@ -69,8 +69,7 @@ Ver a ajuda completa:
 curl -fsSL https://raw.githubusercontent.com/silv4b/presenter/develop/install.sh | bash -s -- --help
 ```
 
-Repare no `--` antes das opções. Ele separa os argumentos do script dos
-argumentos do próprio shell.
+> Repare no `--` antes das opções. Ele separa os argumentos do script dos argumentos do próprio shell.
 
 ## Atualização
 
