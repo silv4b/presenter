@@ -1,0 +1,2 @@
+# Preserva LF em scripts de shell: CRLF quebra a execucao no Linux.
+*.sh text eol=lf
