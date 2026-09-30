@@ -63,6 +63,24 @@ Aplicativo de apresentação de PDFs para desktop, construído com **Tauri 2** +
 | `Scroll do mouse` (com ferramenta ativa) | Aumentar/diminuir tamanho da caneta, marcador ou borracha |
 | `Duplo-clique` (com borracha) | Apagar todas as anotações do slide atual |
 
+## Instalação
+
+Instalação em um único comando, sem baixar e abrir instaladores manualmente:
+
+**Windows** (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/silv4b/presenter/develop/install.ps1 | iex
+```
+
+**Linux** (bash):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/silv4b/presenter/develop/install.sh | bash
+```
+
+Detalhes, opções e desinstalação em [`docs/instalacao-windows.md`](docs/instalacao-windows.md) e [`docs/instalacao-linux.md`](docs/instalacao-linux.md).
+
 ## Stack
 
 - [Tauri 2](https://tauri.app/) — shell desktop (Rust)

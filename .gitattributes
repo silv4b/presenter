@@ -1,2 +1,5 @@
 # Preserva LF em scripts de shell: CRLF quebra a execucao no Linux.
 *.sh text eol=lf
+
+# Preserva LF em scripts PowerShell: CRLF quebra a execucao.
+*.ps1 text eol=lf
