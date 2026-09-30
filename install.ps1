@@ -199,26 +199,10 @@ try {
         exit 0
     }
 
-    # O instalador precisa de privilegio de administrador: cria atalhos no
-    # Menu Iniciar e chaves no registro do sistema.
-    $isAdmin = ([Security.Principal.WindowsPrincipal] `
-        [Security.Principal.WindowsIdentity]::GetCurrent()
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-    if (-not $isAdmin) {
-        Write-Info "Solicitando privilegio de administrador..."
-        $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$($MyInvocation.MyCommand.Path)`"")
-        if ($Version) { $argList += "-Version" ; $argList += $Version }
-        if ($Msi)     { $argList += "-Msi" }
-        try {
-            $p = Start-Process -FilePath "powershell.exe" -ArgumentList $argList -Verb RunAs -Wait -PassThru
-            exit $p.ExitCode
-        } catch {
-            Write-Err "elevacao cancelada ou negada: $($_.Exception.Message)"
-            exit 1
-        }
-    }
-
+    # O NSIS e instalado no modo currentUser (default do Tauri), que nao exige
+    # privilegio de administrador. Nao ha elevacao aqui de proposito: o script
+    # tambem roda via `irm | iex`, onde nao existe arquivo para reinvocar.
+    # Se o MSI exigir, o proprio msiexec dispara o UAC.
     Write-Info "Instalando (pode levar alguns segundos)..."
 
     if ($kind -eq "MSI") {
@@ -233,6 +217,9 @@ try {
     $code = $proc.ExitCode
     if ($code -ne 0) {
         Write-Err "instalador retornou codigo de saida $code"
+        Write-Host ""
+        Write-Host "Se a instalacao foi recusada por falta de permissao, rode o"
+        Write-Host "comando em um PowerShell aberto como Administrador."
         exit $code
     }
 
@@ -240,9 +227,20 @@ try {
     # Conclusao
     # ------------------------------------------------------------------------
 
-    $exe = Get-ChildItem -Path "C:\Program Files\presenter", "$env:LOCALAPPDATA\Programs\presenter" `
-        -Filter "presenter.exe" -Recurse -ErrorAction SilentlyContinue |
-        Select-Object -First 1
+    # currentUser instala em %LOCALAPPDATA%\presenter; perMachine, em
+    # C:\Program Files\presenter. As duas formas sao cobertas.
+    $roots = @(
+        "C:\Program Files\presenter",
+        "$env:LOCALAPPDATA\presenter",
+        "$env:LOCALAPPDATA\Programs\presenter"
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+
+    $exe = $null
+    if ($roots) {
+        $exe = Get-ChildItem -Path $roots `
+            -Filter "presenter.exe" -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+    }
 
     Write-Host ""
     if ($exe) {
