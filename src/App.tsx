@@ -38,6 +38,28 @@ const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.1;
 
+const MIN_PREVIEW = 320;
+const MAX_PREVIEW = 512;
+const MIN_CAROUSEL = 160;
+const MAX_CAROUSEL = 300;
+const DEFAULT_CAROUSEL = 180;
+const SIDEBAR_WIDTH = 320; // w-80 = 320px
+
+// Number(null) e 0, e 0 e um numero valido: ler a chave sem checar se existe
+// faria o clamp devolver o minimo, nunca o default. Por isso o `raw === null`.
+function readNumber(
+  key: string,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
 function PresenterShell() {
   const {
     docDataUrl,
@@ -68,16 +90,9 @@ function PresenterShell() {
   const annotations = usePresenterAnnotations();
   const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout, theme, setTheme } = useSettings();
 
-  const MIN_PREVIEW = 320;
-  const MAX_PREVIEW = 512;
-  const SIDEBAR_WIDTH = 320; // w-80 = 320px
-  const [previewWidth, setPreviewWidth] = useState(() => {
-    const saved = Number(localStorage.getItem(PREVIEW_WIDTH_KEY));
-    if (Number.isFinite(saved)) {
-      return Math.min(MAX_PREVIEW, Math.max(MIN_PREVIEW, saved));
-    }
-    return MAX_PREVIEW;
-  });
+  const [previewWidth, setPreviewWidth] = useState(() =>
+    readNumber(PREVIEW_WIDTH_KEY, MIN_PREVIEW, MAX_PREVIEW, MAX_PREVIEW),
+  );
   const [sidebarWidth] = useState(SIDEBAR_WIDTH);
   const [showPreview, setShowPreview] = useState(() => {
     const saved = localStorage.getItem(PREVIEW_VISIBLE_KEY);
@@ -93,11 +108,9 @@ function PresenterShell() {
   const [closeDocPending, setCloseDocPending] = useState(false);
   const [resizing, setResizing] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [carouselHeight, setCarouselHeight] = useState(() => {
-    const saved = Number(localStorage.getItem(CAROUSEL_HEIGHT_KEY));
-    if (Number.isFinite(saved)) return Math.min(300, Math.max(160, saved));
-    return 180;
-  });
+  const [carouselHeight, setCarouselHeight] = useState(() =>
+    readNumber(CAROUSEL_HEIGHT_KEY, MIN_CAROUSEL, MAX_CAROUSEL, DEFAULT_CAROUSEL),
+  );
   const [showCarousel, setShowCarousel] = useState(() => {
     const saved = localStorage.getItem(CAROUSEL_VISIBLE_KEY);
     return saved !== "false";

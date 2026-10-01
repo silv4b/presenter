@@ -65,11 +65,16 @@ interface PresentationContextValue {
   registerTimerFunctions: (toggle: () => void, reset: () => void) => void;
   registerZoomReset: (reset: () => void) => void;
   resetZoom: () => void;
-  timerMode: "stopwatch" | "countdown";
-  setTimerMode: (mode: "stopwatch" | "countdown") => void;
+  timerMode: TimerMode;
+  setTimerMode: (mode: TimerMode) => void;
   timerInitialTime: number; // in milliseconds
   setTimerInitialTime: (ms: number) => void;
 }
+
+const TIMER_MODE_KEY = "presenter.timerMode";
+const TIMER_INITIAL_TIME_KEY = "presenter.timerInitialTime";
+
+export type TimerMode = "stopwatch" | "countdown";
 
 const PresentationContext = createContext<PresentationContextValue | null>(null);
 
@@ -88,8 +93,25 @@ export function PresentationProvider({ children }: { children: ReactNode }) {
   const [selectedMonitors, setSelectedMonitors] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
   const [notesByPage, setNotesByPage] = useState<Record<number, string[]>>({});
-  const [timerMode, setTimerMode] = useState<"stopwatch" | "countdown">("stopwatch");
-  const [timerInitialTime, setTimerInitialTime] = useState<number>(0); // milliseconds
+  // O tempo inserido e o mesmo nos dois modos: no regressivo e o total a
+  // contar, no progressivo o ponto de partida. Por isso fica em um valor so.
+  const [timerMode, setTimerMode] = useState<TimerMode>(() => {
+    const saved = localStorage.getItem(TIMER_MODE_KEY);
+    return saved === "countdown" ? "countdown" : "stopwatch";
+  });
+  const [timerInitialTime, setTimerInitialTime] = useState<number>(() => {
+    const raw = localStorage.getItem(TIMER_INITIAL_TIME_KEY);
+    const saved = Number(raw);
+    return raw !== null && Number.isFinite(saved) && saved >= 0 ? saved : 0;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(TIMER_MODE_KEY, timerMode);
+  }, [timerMode]);
+
+  useEffect(() => {
+    localStorage.setItem(TIMER_INITIAL_TIME_KEY, String(timerInitialTime));
+  }, [timerInitialTime]);
 
   const timerToggleRef = useRef<(() => void) | null>(null);
   const timerResetRef = useRef<(() => void) | null>(null);

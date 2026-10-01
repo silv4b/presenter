@@ -20,7 +20,9 @@ export interface Settings {
 export function useSettings() {
   const [backgroundColor, setBackgroundColorState] = useState<string>(() => {
     const saved = localStorage.getItem(BG_COLOR_KEY);
-    return saved ?? DEFAULT_BG_COLOR;
+    // A cor vai direto para o style do palco, entao um valor invalido
+    // quebraria a tela. So aceita hex de 6 digitos.
+    return saved && /^#[0-9a-f]{6}$/i.test(saved) ? saved : DEFAULT_BG_COLOR;
   });
   const bgRef = useRef(backgroundColor);
   bgRef.current = backgroundColor;
@@ -31,13 +33,18 @@ export function useSettings() {
   });
 
   const [floatingControlsTimeout, setFloatingControlsTimeoutState] = useState<number>(() => {
-    const saved = Number(localStorage.getItem(CONTROLS_TIMEOUT_KEY));
-    return Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_CONTROLS_TIMEOUT;
+    // `saved > 0` ja descarta o `Number(null)` que devolve 0 quando a chave
+    // ainda nao existe, entao aqui o default vale corretamente.
+    const raw = localStorage.getItem(CONTROLS_TIMEOUT_KEY);
+    const saved = Number(raw);
+    return raw !== null && Number.isFinite(saved) && saved > 0
+      ? saved
+      : DEFAULT_CONTROLS_TIMEOUT;
   });
 
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem(THEME_KEY);
-    return (saved as Theme) ?? DEFAULT_THEME;
+    return saved === "dark" ? "dark" : DEFAULT_THEME;
   });
 
   useEffect(() => {
