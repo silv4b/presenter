@@ -1,13 +1,26 @@
-# Instalação no Windows via PowerShell
+# Instalação no Windows
+
+O Presenter no Windows tem duas formas de uso: **instalado** (instalador NSIS ou
+MSI) ou **portátil** (uma pasta com o `presenter.exe`, sem instalação).
+
+- [Instalação automática via PowerShell](#instalação-via-powershell)
+- [Versão portátil](#versão-portátil)
+
+## Requisito
+
+Windows 10 ou superior. O Windows 7 e o 8 não são suportados pelo Tauri 2.
+
+---
+
+# Instalação via PowerShell
 
 O Presenter pode ser instalado no Windows com um único comando, sem baixar e
 abrir instaladores manualmente. É o equivalente ao
 [`curl | bash` do Linux](./instalacao-linux.md).
 
-## Requisito
+## Requisito do script
 
-Windows 10 ou superior com **PowerShell 5.1** (já presente no Windows 10 e 11) ou
-**PowerShell 7**. O Windows 7 e o 8 não são suportados pelo Tauri 2.
+**PowerShell 5.1** (já presente no Windows 10 e 11) ou **PowerShell 7**.
 
 Para conferir a versão:
 
@@ -138,3 +151,75 @@ Os instaladores também estão disponíveis diretamente na página de releases:
 
 Para quem já usa o gerenciador de pacotes do Windows, o Presenter ainda não está
 no catálogo do `winget`. Enquanto isso, use o comando PowerShell acima.
+
+---
+
+# Versão portátil
+
+Cada release publica também um zip portátil, na raiz da página de releases:
+`presenter_<versão>-portavel-win-x64.zip`.
+
+Não precisa instalar nada. Extraia a pasta em qualquer lugar (pendrive, pasta de
+rede, desktop) e execute o `presenter.exe`.
+
+```text
+presenter-1.3.0-portavel/
+├── presenter.exe
+├── portable.txt
+└── app-data/          ← criado na primeira execução
+```
+
+## Requisito
+
+Windows 10 1803 ou superior, que já traz o **Microsoft Edge WebView2 Runtime**
+instalado. Se o app não abrir, baixe o runtime em
+<https://developer.microsoft.com/microsoft-edge/webview2/>.
+
+## Como funciona
+
+O arquivo `portable.txt` é o marcador do modo portátil. Enquanto ele existir ao
+lado do `presenter.exe`, o app guarda **todos** os seus dados na subpasta
+`app-data`, ao lado do executável:
+
+| Dado | Onde fica |
+| --- | --- |
+| Monitores marcados | `app-data\config.json` |
+| Tema, sidebars, carrrossel, cronômetro, histórico | `app-data\EBWebView\` |
+
+Nada é gravado no Registro nem em `%APPDATA%`. Isso vale tanto para o app
+instalado quanto para o portátil: o comportamento é decidido pelo arquivo, não
+por um build separado.
+
+## Levar as configurações junto
+
+Copie a pasta `app-data` inteira para o novo destino. É só isso — o app retoma
+com as mesmas preferências, inclusive o histórico de PDFs abertos.
+
+## Apagar o app
+
+Feche o Presenter e apague a pasta. Não sobra nada no sistema.
+
+Se você **apagar o `portable.txt`**, o mesmo `presenter.exe` volta ao
+comportamento instalado, lendo e gravando em `%APPDATA%` e `%LOCALAPPDATA%`.
+
+## Gerar o portable localmente
+
+Para quem desenvolve ou quer um zip com outro nome:
+
+```bash
+npm run tauri:portable
+```
+
+O script compila o app (`tauri build --no-bundle`), monta a pasta em
+`portable/presenter-<versão>-portavel/` e gera o zip ao lado. Para reaproveitar
+um binário já compilado:
+
+```bash
+npm run tauri:portable -- --no-build
+```
+
+## Coexistir com a versão instalada
+
+As duas versões podem ficar instaladas ao mesmo tempo. Elas não compartilham
+preferências: a instalada usa `%APPDATA%`, a portátil usa a `app-data` ao lado
+do `.exe`.

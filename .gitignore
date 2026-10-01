@@ -24,4 +24,8 @@ dist-ssr
 *.sw?
 
 # Local scripts
-scripts/
+scripts/*
+!scripts/portable.js
+
+# Portable build output
+portable/

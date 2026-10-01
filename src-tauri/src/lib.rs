@@ -1,9 +1,17 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Mutex;
+use tauri::utils::config::AppDirectoriesOverride;
 use tauri::{AppHandle, Manager, Monitor, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 const VIEWSCREEN_PREFIX: &str = "viewscreen";
+
+/// Arquivo que, presente na mesma pasta do executável, ativa o modo portátil.
+const PORTABLE_MARKER: &str = "portable.txt";
+
+/// Pasta que recebe todos os dados do app quando o modo portátil está ativo.
+const PORTABLE_DATA_DIR: &str = "app-data";
 
 #[derive(Default)]
 struct DocState(Mutex<Option<DocInfo>>);
@@ -143,6 +151,17 @@ fn monitor_key(m: &Monitor) -> String {
         .unwrap_or_else(|| format!("monitor:{}x{}", pos.x, pos.y))
 }
 
+/// Retorna a pasta de dados do modo portátil quando existe um `portable.txt`
+/// ao lado do executável. Sem o marcador, o app usa os diretórios padrão do
+/// sistema (`%APPDATA%`), preservando o comportamento da versão instalada.
+fn portable_data_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?.to_path_buf();
+    dir.join(PORTABLE_MARKER)
+        .is_file()
+        .then(|| dir.join(PORTABLE_DATA_DIR))
+}
+
 fn viewscreen_label(idx: usize) -> String {
     format!("{}-{}", VIEWSCREEN_PREFIX, idx)
 }
@@ -218,6 +237,12 @@ fn save_file(path: String, data: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+
+    if let Some(dir) = portable_data_dir() {
+        context.config_mut().app.app_directories_override = Some(AppDirectoriesOverride::Root(dir));
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -248,7 +273,9 @@ pub fn run() {
             let decoder = png::Decoder::new(std::io::Cursor::new(icon_bytes));
             let mut reader = decoder.read_info().expect("failed to decode icon PNG");
             let mut buf = vec![0u8; reader.output_buffer_size()];
-            let info = reader.next_frame(&mut buf).expect("failed to read icon frame");
+            let info = reader
+                .next_frame(&mut buf)
+                .expect("failed to read icon frame");
             buf.truncate(info.buffer_size());
             let icon = tauri::image::Image::new_owned(buf, info.width, info.height);
             if let Some(window) = app.get_webview_window("main") {
@@ -256,6 +283,6 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }
