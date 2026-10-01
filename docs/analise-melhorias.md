@@ -35,7 +35,7 @@
 
 ## A. Melhorias de UX
 
-### A1. Configurações reais (dialog placeholder)
+### A1. Configurações reais (dialog placeholder) ✅
 
 **Complexidade:** Média
 
@@ -149,7 +149,7 @@ Exibido no `PresenterNotes.tsx` na sidebar do preview.
 Adicionar um toggle para tela branca (W), útil para iluminar um sala
 durante perguntas.
 
-### A13. Barra de progresso de slides
+### A13. Barra de progresso de slides ⛔
 
 **Complexidade:** Baixa
 
@@ -163,7 +163,7 @@ de apenas um campo numérico.
 Permitir `presenter.exe myfile.pdf` para abrir um arquivo
 automaticamente ao iniciar.
 
-### A15. Imprimir slide atual
+### A15. Imprimir slide atual ⛔
 
 **Complexidade:** Baixa
 
@@ -185,7 +185,7 @@ no heap JS como data URL.
 ou o plugin `fs` para servir o arquivo diretamente, evitando a cópia
 completa pela IPC.
 
-### B2. Carrossel renderiza todas as páginas de uma vez
+### B2. Carrossel renderiza todas as páginas de uma vez ✅
 
 **Complexidade:** Média
 
@@ -215,7 +215,7 @@ Para páginas com muitas anotações, isso pode ficar lento.
 
 **Solução:** Dirty-rect tracking ou redesenhar apenas o traço alterado.
 
-### B5. GC pressure durante desenho ⛔
+### B5. GC pressure durante desenho
 
 **Complexidade:** Média
 
@@ -287,7 +287,7 @@ durante perguntas).
 Mostrar duas ou mais páginas lado a lado (útil para comparação
 ou quando o PDF tem páginas facing).
 
-### C7. Exportar anotações ✅
+### C7. Exportar slides com anotações ✅
 
 **Complexidade:** Alta
 
@@ -382,7 +382,7 @@ resto importa de `"@/lib/utils"`. Padronizar em um caminho.
 
 ## E. Plataforma e Build
 
-### E1. Build para macOS/Linux
+### E1. Build para macOS/Linux ✅
 
 **Complexidade:** Média
 
@@ -390,7 +390,7 @@ O bundle lista "all" mas o app foi desenvolvido apenas no Windows.
 Testar e ajustar: decorações no macOS, fullscreen, detecção de
 monitores no Wayland vs X11.
 
-### E2. Ícone do app
+### E2. Ícone do app ✅
 
 **Complexidade:** Baixa
 
@@ -413,39 +413,3 @@ autor (Bruno Silva), licença (MIT), homepage e repository.
 
 Necessário para macOS e Windows SmartScreen. Configurar
 certificados de assinatura.
-
----
-
-## Priorização Sugerida
-
-### Fase 1 — Quick Wins (fáceis, alto impacto)
-
-1. ~~Drag-and-drop para abrir PDF (A2)~~ ✅
-2. ~~Atalhos de teclado para ferramentas (A8)~~ ✅
-3. Tela branca (A12)
-4. Barra de progresso de slides (A13)
-5. Argumento de linha de comando (A14)
-6. Memoização dos Page no carrossel (B6)
-7. Linter + formatter (D1)
-8. Error boundaries (D3)
-
-### Fase 2 — Médio prazo
-
-1. Persistência de anotações (C1)
-2. ~~Lista de arquivos recentes (A3)~~ ✅
-3. ~~Seletor de cores (A6)~~ ✅
-4. Indicador de página na projeção (A7)
-5. ~~Configurações reais (A1)~~ ✅
-6. Virtualização do carrossel (B2)
-7. ~~Undo/redo de anotações (A5)~~ ✅
-8. Testes unitários (D2)
-
-### Fase 3 — Longo prazo
-
-1. Correção de performance base64 (B1)
-2. Transições entre slides (C3)
-3. ~~Notas do apresentador (A11)~~ ✅
-4. ~~Zoom/Pan nos slides (A10)~~ ✅
-5. Controle remoto via celular (C8)
-6. Ferramentas de forma (C4)
-7. ~~Exportar anotações como PDF (C7)~~ ✅
