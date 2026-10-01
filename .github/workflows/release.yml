@@ -87,3 +87,17 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Build portable package
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: npm run tauri:portable -- --no-build
+
+      - name: Upload portable package
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $zip = Get-ChildItem portable/*.zip | Select-Object -First 1
+          gh release upload ${{ github.ref_name }} $zip.FullName --clobber
