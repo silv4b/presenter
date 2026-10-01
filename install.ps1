@@ -20,14 +20,14 @@
 #>
 [CmdletBinding()]
 param(
-    # Versao especifica (ex.: v1.3.0). Padrao: a mais recente.
-    [string]$Version,
+  # Versão especifica (ex.: v1.3.0). Padrão: a mais recente.
+  [string]$Version,
 
-    # Mostra o que seria feito, sem baixar nem instalar.
-    [switch]$DryRun,
+  # Mostra o que seria feito, sem baixar nem instalar.
+  [switch]$DryRun,
 
-    # Usa o instalador .msi em vez do .exe do NSIS.
-    [switch]$Msi
+  # Usa o instalador .msi em vez do .exe do NSIS.
+  [switch]$Msi
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,22 +41,22 @@ $GitHubApi = "https://api.github.com/repos/$Repo"
 # Saida
 # ---------------------------------------------------------------------------
 
-function Write-Info    { param($m) Write-Host ":: $m" -ForegroundColor Cyan }
+function Write-Info { param($m) Write-Host ":: $m" -ForegroundColor Cyan }
 function Write-Success { param($m) Write-Host "ok $m" -ForegroundColor Green }
-function Write-Warn    { param($m) Write-Host "!! $m" -ForegroundColor Yellow }
-function Write-Err     { param($m) Write-Host "erro: $m" -ForegroundColor Red }
+function Write-Warn { param($m) Write-Host "!! $m" -ForegroundColor Yellow }
+function Write-Err { param($m) Write-Host "erro: $m" -ForegroundColor Red }
 
 # ---------------------------------------------------------------------------
 # Pre-requisitos
 # ---------------------------------------------------------------------------
 
 if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Err "PowerShell 5.1 ou superior e necessario (encontrado $($PSVersionTable.PSVersion))"
+    Write-Err "PowerShell 5.1 ou superior e necessário (encontrado $($PSVersionTable.PSVersion))"
     exit 1
 }
 
 # ---------------------------------------------------------------------------
-# Deteccao de arquitetura
+# Detecção de arquitetura
 # ---------------------------------------------------------------------------
 
 $arch = $env:PROCESSOR_ARCHITECTURE
@@ -83,12 +83,12 @@ function Get-Headers {
 }
 
 if (-not $Version) {
-    Write-Info "Consultando a versao mais recente..."
+    Write-Info "Consultando a versão mais recente..."
     try {
         $release = Invoke-RestMethod -Uri "$GitHubApi/releases/latest" -Headers (Get-Headers)
         $Version = $release.tag_name
     } catch {
-        Write-Err "nao foi possivel consultar a API do GitHub: $($_.Exception.Message)"
+        Write-Err "nao foi possível consultar a API do GitHub: $($_.Exception.Message)"
         exit 1
     }
 } else {
@@ -107,11 +107,11 @@ if (-not $Version) {
 }
 
 # ---------------------------------------------------------------------------
-# Selecao do artefato
+# Seleção do artefato
 # ---------------------------------------------------------------------------
 
 # O Tauri nomeia o NSIS como _x64-setup.exe e o MSI como _x64_en-US.msi.
-# O padrao precisa ser ancorado no final: sem isso, -Msi acabaria casando
+# O padrão precisa ser ancorado no final: sem isso, -Msi acabaria casando
 # com o .exe, que aparece antes na lista de assets.
 if ($Msi) {
     $patterns = @("_$MsiArch.*\.msi$")
@@ -128,9 +128,9 @@ foreach ($p in $patterns) {
 }
 
 if (-not $asset) {
-    Write-Err "nenhum instalador compativel encontrado em $Version para $arch"
+    Write-Err "nenhum instalador compatível encontrado em $Version para $arch"
     Write-Host ""
-    Write-Host "Instaladores disponiveis nesta release:"
+    Write-Host "Instaladores disponíveis nesta release:"
     $release.assets |
         Where-Object { $_.name -match '\.(exe|msi)$' } |
         ForEach-Object { Write-Host "  - $($_.name)" }
@@ -181,11 +181,11 @@ try {
             Write-Err "download incompleto: esperado $($asset.size) bytes, obtido $size"
             exit 1
         }
-        Write-Success "Download concluido ($([math]::Round($size / 1MB, 2)) MB)"
+        Write-Success "Download concluído ($([math]::Round($size / 1MB, 2)) MB)"
     }
 
     # ------------------------------------------------------------------------
-    # Instalacao
+    # Instalação
     # ------------------------------------------------------------------------
 
     if ($DryRun) {
@@ -195,14 +195,14 @@ try {
             Write-Host "[dry-run] Start-Process '$target' -ArgumentList '/S' -Wait" -ForegroundColor Yellow
         }
         Write-Host ""
-        Write-Info "dry-run concluido. Nada foi instalado."
+        Write-Info "dry-run concluído. Nada foi instalado."
         exit 0
     }
 
     # O NSIS e instalado no modo currentUser (default do Tauri), que nao exige
-    # privilegio de administrador. Nao ha elevacao aqui de proposito: o script
-    # tambem roda via `irm | iex`, onde nao existe arquivo para reinvocar.
-    # Se o MSI exigir, o proprio msiexec dispara o UAC.
+    # privilegio de administrador. Nao ha elevação aqui de proposito: o script
+    # também roda via `irm | iex`, onde nao existe arquivo para reinvocar.
+    # Se o MSI exigir, o próprio msiexec dispara o UAC.
     Write-Info "Instalando (pode levar alguns segundos)..."
 
     if ($kind -eq "MSI") {
@@ -216,15 +216,15 @@ try {
 
     $code = $proc.ExitCode
     if ($code -ne 0) {
-        Write-Err "instalador retornou codigo de saida $code"
+        Write-Err "instalador retornou código de saída $code"
         Write-Host ""
-        Write-Host "Se a instalacao foi recusada por falta de permissao, rode o"
+        Write-Host "Se a instalação foi recusada por falta de permissão, rode o"
         Write-Host "comando em um PowerShell aberto como Administrador."
         exit $code
     }
 
     # ------------------------------------------------------------------------
-    # Conclusao
+    # Conclusão
     # ------------------------------------------------------------------------
 
     # currentUser instala em %LOCALAPPDATA%\presenter; perMachine, em
@@ -250,9 +250,8 @@ try {
     }
 
     Write-Host ""
-    Write-Host "  Execute:      presenter"
-    Write-Host "  Atalhos:      F5 inicia a apresentacao, Esc encerra"
-    Write-Host "  Desinstalar:  Configuracoes > Aplicativos > Presenter"
+    Write-Host "  Atalhos:      F5 inicia a apresentação, Esc encerra"
+    Write-Host "  Desinstalar:  Configurações > Aplicativos > Presenter"
     Write-Host ""
 
 } finally {
