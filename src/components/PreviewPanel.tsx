@@ -37,22 +37,22 @@ export function PreviewPanel({
         "flex shrink-0 overflow-hidden",
         !resizing && "transition-[width] duration-300 ease-in-out",
       )}
-      style={{ width: show ? width + 6 : 0 }}
+      style={{ width: show ? width : 0 }}
     >
-      <div
-        onMouseDown={onMouseDown}
-        className={cn(
-          "flex w-1.5 shrink-0 cursor-col-resize items-center justify-center transition-colors hover:bg-primary/60 active:bg-primary",
-          resizing && "bg-primary/40",
-        )}
-        aria-hidden
-      >
-        <div className="h-8 w-0.5 rounded-full bg-muted-foreground/40" />
-      </div>
       <aside
         style={{ width }}
-        className="flex shrink-0 flex-col gap-3 border-l border-sidebar-border bg-sidebar/50 p-4"
+        className="relative flex shrink-0 flex-col gap-3 border-l border-sidebar-border bg-sidebar/50 p-4"
       >
+        <div
+          onMouseDown={onMouseDown}
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-1.5 cursor-col-resize items-center justify-center transition-colors hover:bg-primary/60 active:bg-primary",
+            resizing && "bg-primary/40",
+          )}
+          aria-hidden
+        >
+          <div className="h-8 w-0.5 rounded-full bg-muted-foreground/40" />
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Próximo
