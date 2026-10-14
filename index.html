@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Presenter</title>
+    <script>
+      // Aplica o tema salvo antes da primeira pintura, evitando o flash do tema padrao.
+      // Espelha o que o useSettings faz com THEME_KEY.
+      try {
+        if (localStorage.getItem("presenter.theme") === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch {}
+    </script>
   </head>
 
   <body>
