@@ -38,3 +38,6 @@ scripts/*
 
 # Portable build output
 portable/
+
+# Graphify output
+graphify-out/
