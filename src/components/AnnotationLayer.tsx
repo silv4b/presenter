@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  AnnotationStroke,
-  AnnotationTool,
   ERASER_RADIUS,
   HIGHLIGHTER_COLOR,
+  HIGHLIGHTER_SIZE,
   PEN_COLOR,
-  Point,
+  PEN_SIZE,
+  type AnnotationStroke,
+  type AnnotationTool,
+  type Point,
 } from "@/lib/annotations";
 import { drawStrokes, drawLaser, drawEraserCursor, drawToolCursor } from "@/lib/canvasDrawing";
 
@@ -33,6 +35,21 @@ interface AnnotationLayerProps {
   annotationCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
 
+function withinCanvas(rect: DOMRect, clientX: number, clientY: number): boolean {
+  return (
+    clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  );
+}
+
+function toCanvasPoint(rect: DOMRect, clientX: number, clientY: number, scale: number): Point {
+  return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
+}
+
+function overCanvas(canvas: HTMLCanvasElement, clientX: number, clientY: number): boolean {
+  const el = document.elementFromPoint(clientX, clientY);
+  return !!el && (el === canvas || canvas.contains(el));
+}
+
 function drawScene(
   ctx: CanvasRenderingContext2D,
   dpr: number,
@@ -41,12 +58,11 @@ function drawScene(
   scale: number,
   strokes: AnnotationStroke[],
   laser: Point | null,
-  eraserPos: Point | null,
+  cursor: Point | null,
+  activeTool: AnnotationTool | null,
   eraserRadius: number,
-  toolCursor: Point | null,
   toolSize: number,
   toolColor: string,
-  laserCursor: Point | null,
 ) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
@@ -54,9 +70,10 @@ function drawScene(
   drawStrokes(ctx, strokes, scale);
 
   if (laser) drawLaser(ctx, laser, scale);
-  if (laserCursor) drawLaser(ctx, laserCursor, scale);
-  if (eraserPos) drawEraserCursor(ctx, eraserPos, eraserRadius, scale);
-  if (toolCursor) drawToolCursor(ctx, toolCursor, toolSize, toolColor, scale);
+  if (!cursor) return;
+  if (activeTool === "laser") drawLaser(ctx, cursor, scale);
+  else if (activeTool === "eraser") drawEraserCursor(ctx, cursor, eraserRadius, scale);
+  else drawToolCursor(ctx, cursor, toolSize, toolColor, scale);
 }
 
 export function AnnotationLayer({
@@ -74,8 +91,8 @@ export function AnnotationLayer({
   onEraseEnd,
   onEraseAll,
   eraserRadius = ERASER_RADIUS,
-  penSize = 2.5,
-  highlighterSize = 18,
+  penSize = PEN_SIZE,
+  highlighterSize = HIGHLIGHTER_SIZE,
   penColor = PEN_COLOR,
   highlighterColor = HIGHLIGHTER_COLOR,
   onResize,
@@ -86,11 +103,9 @@ export function AnnotationLayer({
   const erasingRef = useRef(false);
   const shiftRef = useRef(false);
   const strokeStartRef = useRef<Point | null>(null);
-  const [eraserPos, setEraserPos] = useState<Point | null>(null);
-  const [toolCursor, setToolCursor] = useState<Point | null>(null);
-  const [laserCursor, setLaserCursor] = useState<Point | null>(null);
+  const [cursor, setCursor] = useState<Point | null>(null);
 
-  // Track global mouse position for instant cursor on tool switch
+  // Acompanha a posição global do ponteiro para posicionar o cursor imediatamente ao trocar de ferramenta
   const lastMouseX = useRef(0);
   const lastMouseY = useRef(0);
   useEffect(() => {
@@ -122,101 +137,29 @@ export function AnnotationLayer({
   const toolColor = activeTool === "pen" ? penColor : activeTool === "highlighter" ? highlighterColor : "";
   const isActive = interactive && activeTool !== null;
 
-  useEffect(() => {
-    if (activeTool !== "eraser" || !interactive) return;
-    const getPos = (e: PointerEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return null;
-      return { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
-    };
-    const handleMove = (e: PointerEvent) => {
-      const pos = getPos(e);
-      if (pos) setEraserPos(pos);
-    };
-    window.addEventListener("pointermove", handleMove);
-    // Initialize immediately from the last known mouse position
+  const cursorPoint = useCallback((clientX: number, clientY: number): Point | null => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      const rect = canvas.getBoundingClientRect();
-      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
-      if (el && (el === canvas || canvas.contains(el))) {
-        setEraserPos({
-          x: (lastMouseX.current - rect.left) / scale,
-          y: (lastMouseY.current - rect.top) / scale,
-        });
-      }
-    }
-    return () => window.removeEventListener("pointermove", handleMove);
-  }, [activeTool, interactive, scale]);
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!withinCanvas(rect, clientX, clientY)) return null;
+    return toCanvasPoint(rect, clientX, clientY, scale);
+  }, [scale]);
 
   useEffect(() => {
-    if ((activeTool !== "pen" && activeTool !== "highlighter") || !interactive) return;
-    const handleMove = (e: PointerEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-        setToolCursor(null);
-        return;
-      }
-      setToolCursor({
-        x: (e.clientX - rect.left) / scale,
-        y: (e.clientY - rect.top) / scale,
-      });
-    };
+    if (!isActive) return;
+    const handleMove = (e: PointerEvent) => setCursor(cursorPoint(e.clientX, e.clientY));
     window.addEventListener("pointermove", handleMove);
-    // Initialize immediately from the last known mouse position
+    // Posiciona o cursor imediatamente a partir da última posição conhecida do ponteiro
     const canvas = canvasRef.current;
-    if (canvas) {
-      const rect = canvas.getBoundingClientRect();
-      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
-      if (el && (el === canvas || canvas.contains(el))) {
-        setToolCursor({
-          x: (lastMouseX.current - rect.left) / scale,
-          y: (lastMouseY.current - rect.top) / scale,
-        });
-      }
+    if (canvas && overCanvas(canvas, lastMouseX.current, lastMouseY.current)) {
+      setCursor(toCanvasPoint(canvas.getBoundingClientRect(), lastMouseX.current, lastMouseY.current, scale));
     }
     return () => window.removeEventListener("pointermove", handleMove);
-  }, [activeTool, interactive, scale, penSize, highlighterSize]);
+  }, [isActive, scale, cursorPoint]);
 
   useEffect(() => {
-    if (activeTool !== "laser" || !interactive) return;
-    const handleMove = (e: PointerEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-        setLaserCursor(null);
-        return;
-      }
-      setLaserCursor({
-        x: (e.clientX - rect.left) / scale,
-        y: (e.clientY - rect.top) / scale,
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const rect = canvas.getBoundingClientRect();
-      const el = document.elementFromPoint(lastMouseX.current, lastMouseY.current);
-      if (el && (el === canvas || canvas.contains(el))) {
-        setLaserCursor({
-          x: (lastMouseX.current - rect.left) / scale,
-          y: (lastMouseY.current - rect.top) / scale,
-        });
-      }
-    }
-    return () => window.removeEventListener("pointermove", handleMove);
-  }, [activeTool, interactive, scale]);
-
-  useEffect(() => {
-    if (activeTool !== "eraser") setEraserPos(null);
-    if (activeTool !== "pen" && activeTool !== "highlighter") setToolCursor(null);
-    if (activeTool !== "laser") setLaserCursor(null);
-  }, [activeTool]);
+    if (!isActive) setCursor(null);
+  }, [isActive]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -229,18 +172,14 @@ export function AnnotationLayer({
     canvas.height = Math.round(h * dpr);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawScene(ctx, dpr, w, h, scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor, laserCursor);
-  }, [scale, strokes, laser, eraserPos, eraserRadius, toolCursor, toolSize, toolColor, laserCursor]);
+    drawScene(ctx, dpr, w, h, scale, strokes, laser, cursor, activeTool, eraserRadius, toolSize, toolColor);
+  }, [scale, strokes, laser, cursor, activeTool, eraserRadius, toolSize, toolColor]);
 
   const toPoint = useCallback(
     (clientX: number, clientY: number): Point => {
       const canvas = canvasRef.current;
       if (!canvas) return { x: 0, y: 0 };
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (clientX - rect.left) / scale,
-        y: (clientY - rect.top) / scale,
-      };
+      return toCanvasPoint(canvas.getBoundingClientRect(), clientX, clientY, scale);
     },
     [scale],
   );
@@ -261,7 +200,7 @@ export function AnnotationLayer({
       erasingRef.current = true;
       e.currentTarget.setPointerCapture(e.pointerId);
       const p = toPoint(e.clientX, e.clientY);
-      setEraserPos(p);
+      setCursor(p);
       onEraseStart?.(p);
     }
   };
@@ -280,12 +219,12 @@ export function AnnotationLayer({
         p = { x: s.x + Math.cos(snapped) * dist, y: s.y + Math.sin(snapped) * dist };
       }
       onStrokePoint(p);
-    } else if (activeTool === "pen" || activeTool === "highlighter") {
-      setToolCursor(p);
+    } else if (drawing) {
+      setCursor(p);
     } else if (activeTool === "laser") {
       onLaser(p);
     } else if (activeTool === "eraser") {
-      setEraserPos(p);
+      setCursor(p);
       if (erasingRef.current) onErasePoint?.(p);
     }
   };
@@ -309,8 +248,7 @@ export function AnnotationLayer({
   const handlePointerLeave = () => {
     if (!interactive) return;
     if (activeTool === "laser") onLaser(null);
-    if (activeTool === "eraser") setEraserPos(null);
-    if (activeTool === "pen" || activeTool === "highlighter") setToolCursor(null);
+    if (activeTool !== null) setCursor(null);
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
