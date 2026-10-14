@@ -9,16 +9,38 @@ Mover configurações persistentes do `localStorage` para um arquivo `config.jso
 
 | Chave localStorage | Tipo | Destino no config.json |
 |---|---|---|
-| `presenter:penColor` | string | `annotations.penColor` |
-| `presenter:highlighterColor` | string | `annotations.highlighterColor` |
-| `presenter:penSize` | number | `annotations.penSize` |
-| `presenter:highlighterSize` | number | `annotations.highlighterSize` |
-| `presenter:eraserRadius` | number | `annotations.eraserRadius` |
-| `presenter:alwaysShowFloatingControls` | boolean | `presentation.alwaysShowFloatingControls` |
-| `presenter:floatingControlsTimeout` | number | `presentation.floatingControlsTimeout` |
-| `presenter:backgroundColor` | string | `presentation.backgroundColor` |
-| `presenter:selectedMonitors` | string[] | `presentation.selectedMonitors` |
-| `presenter:fileHistory` | HistoryEntry[] | `history.files` |
+| `presenter.penSize` | number | `annotations.penSize` |
+| `presenter.highlighterSize` | number | `annotations.highlighterSize` |
+| `presenter.eraserRadius` | number | `annotations.eraserRadius` |
+| `presenter.penColor` | string | `annotations.penColor` |
+| `presenter.highlighterColor` | string | `annotations.highlighterColor` |
+| `presenter.alwaysShowFloatingControls` | boolean | `presentation.alwaysShowFloatingControls` |
+| `presenter.floatingControlsTimeout` | number | `presentation.floatingControlsTimeout` |
+| `presenter.backgroundColor` | string | `presentation.backgroundColor` |
+| `presenter.theme` | string | `presentation.theme` |
+| `presenter.timerMode` | string | `presentation.timerMode` |
+| `presenter.timerInitialTime` | number | `presentation.timerInitialTime` |
+| `presenter.sidebarVisible` | boolean | `layout.sidebarVisible` |
+| `presenter.previewVisible` | boolean | `layout.previewVisible` |
+| `presenter.previewWidth` | number | `layout.previewWidth` |
+| `presenter.carouselVisible` | boolean | `layout.carouselVisible` |
+| `presenter.carouselHeight` | number | `layout.carouselHeight` |
+| `presenter-file-history` | HistoryEntry[] | `history.files` |
+
+Observações:
+
+- A cor e o tamanho da caneta e do marcador são persistidos em `localStorage`
+  (`presenter.penColor`, `presenter.highlighterColor`, `presenter.penSize`,
+  `presenter.highlighterSize`), em `src/state/annotations/presenter.tsx`.
+- Os monitores já **não** usam localStorage: são gravados pelo Rust em
+  `config.json` (`monitors`), via `get_monitor_config`/`set_monitor_config`.
+- O prefixo real é `presenter.` (ponto) para as chaves de layout e
+  configurações, **incluindo os tamanhos das ferramentas**, que migraram de
+  `presenter:` (dois-pontos). As chaves antigas ainda são lidas como fallback em
+  `readToolSize` (`presenter.tsx`), só para não perder a escolha de quem já usava
+  o app.
+- O histórico de arquivos usa `presenter-file-history` (traço), o único prefixo
+  fora do padrão. Trocá-lo apagaria o histórico já salvo, então fica como está.
 
 ---
 
@@ -29,7 +51,7 @@ Mover configurações persistentes do `localStorage` para um arquivo `config.jso
   "version": 1,
   "annotations": {
     "penColor": "#ef4444",
-    "highlighterColor": "#facc15",
+    "highlighterColor": "#eab308",
     "penSize": 2.5,
     "highlighterSize": 18,
     "eraserRadius": 18

@@ -1,7 +1,7 @@
 # Instalação no Windows
 
-O Presenter no Windows tem duas formas de uso: **instalado** (instalador NSIS ou
-MSI) ou **portátil** (uma pasta com o `presenter.exe`, sem instalação).
+O Presenter no Windows tem duas formas de uso: **instalado** (instalador NSIS)
+ou **portátil** (uma pasta com o `presenter.exe`, sem instalação).
 
 - [Instalação automática via PowerShell](#instalação-via-powershell)
 - [Versão portátil](#versão-portátil)
@@ -63,12 +63,9 @@ Presenter v1.3.0
 
 | Formato | Arquivo | Instalação |
 | --- | --- | --- |
-| NSIS (padrão) | `presenter_<versão>_x64-setup.exe` | executa com `/S` |
-| MSI | `presenter_<versão>_x64_en-US.msi` | `msiexec /i /quiet` |
+| NSIS | `presenter_<versão>_x64-setup.exe` | executa com `/S` |
 
-O NSIS é o padrão por oferecer uma interface de instalação mais simples. O MSI
-interessa em ambientes corporativos, onde o `msiexec` se integra a políticas de
-implantação de software.
+O NSIS é o padrão do Tauri e oferece uma interface de instalação simples.
 
 ## Opções
 
@@ -81,9 +78,6 @@ passá-las:
 
 # Instalar uma versão específica
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/silv4b/presenter/develop/install.ps1))) -Version v1.3.0
-
-# Forçar o instalador MSI
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/silv4b/presenter/develop/install.ps1))) -Msi
 ```
 
 > Com o `irm | iex` simples não é possível passar parâmetros, porque o pipeline
@@ -97,7 +91,7 @@ instalada.
 
 ## Desinstalação
 
-**Configurações → Aplicativos → Presenter → Desinstalar.**
+**Configurações → Aplicativos → presenter → Desinstalar.**
 
 Pelo terminal, com o desinstalador que o próprio instalador deixou:
 
@@ -166,6 +160,7 @@ rede, desktop) e execute o `presenter.exe`.
 presenter-1.3.0-portavel/
 ├── presenter.exe
 ├── portable.txt
+├── LEIA-ME.txt
 └── app-data/          ← criado na primeira execução
 ```
 
@@ -184,7 +179,7 @@ lado do `presenter.exe`, o app guarda **todos** os seus dados na subpasta
 | Dado | Onde fica |
 | --- | --- |
 | Monitores marcados | `app-data\config.json` |
-| Tema, sidebars, carrrossel, cronômetro, histórico | `app-data\EBWebView\` |
+| Tema, sidebars, carrossel, cronômetro, histórico | `app-data\EBWebView\` |
 
 Nada é gravado no Registro nem em `%APPDATA%`. Isso vale tanto para o app
 instalado quanto para o portátil: o comportamento é decidido pelo arquivo, não

@@ -43,7 +43,7 @@ O usuário baixa o instalador do site/GitHub e executa manualmente.
 **Desvantagens:**
 
 - Usuário precisa saber que existe uma versão nova
-- Processo manual:訪ar site → baixar → executar → instalar
+- Processo manual: visitar site → baixar → executar → instalar
 - Sem notificação automática
 - Risco do usuário usar versão antiga sem saber
 

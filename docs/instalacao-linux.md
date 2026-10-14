@@ -42,12 +42,11 @@ Presenter v1.3.0
 | Distribuição | Artefato | Instalação |
 | --- | --- | --- |
 | Debian, Ubuntu, Linux Mint, Pop!_OS | `.deb` | `apt-get install` |
-| Fedora, RHEL, CentOS | `.rpm` | `dnf install` |
-| Arch, openSUSE e demais | `.AppImage` | `/opt/presenter` + symlink em `/usr/local/bin` |
+| Fedora, Arch, openSUSE e demais | `.AppImage` | `/opt/presenter` + symlink em `/usr/local/bin` |
 
 As dependências de sistema (`libwebkit2gtk`, `libgtk-3`, etc.) são resolvidas
-automaticamente pelo `apt-get` ou pelo `dnf`, conforme o caso. No caminho
-AppImage, não há dependência de gerenciador de pacotes.
+automaticamente pelo `apt-get`. No caminho AppImage, não há dependência de
+gerenciador de pacotes.
 
 ## Opções
 
@@ -82,9 +81,6 @@ instalada.
 ```sh
 # Debian/Ubuntu
 sudo apt remove presenter
-
-# Fedora/RHEL
-sudo dnf remove presenter
 
 # AppImage
 sudo rm /usr/local/bin/presenter /opt/presenter/presenter.AppImage

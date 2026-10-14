@@ -1,37 +1,45 @@
 # AGENTS.md
 
-Diretrizes para agentes que trabalham neste repositório.
+Guidelines for agents working in this repository.
 
-## Commits em Lotes
+## Batch Commits
 
-Sempre que houver múltiplas mudanças não relacionadas, organize os commits em lotes independentes, cada um seguindo a convenção semantic release (em pt-BR):
+Whenever there are multiple unrelated changes, organize them into independent commits, each following the semantic-release convention (in Portuguese):
 
-- `feat:` — novas funcionalidades
-- `fix:` — correções de bugs
-- `chore:` — tarefas de manutenção (formatação, lint, dependências)
-- `docs:` — alterações de documentação
-- `refactor:` — refatorações sem mudança de comportamento
-- `test:` — adição/ajuste de testes
+- `feat:` — new features
+- `fix:` — bug fixes
+- `chore:` — maintenance tasks (formatting, lint, dependencies)
+- `ci:` — changes to GitHub Actions workflows
+- `style:` — formatting with no behavior change
+- `docs:` — documentation changes
+- `refactor:` — refactors with no behavior change
+- `test:` — adding or adjusting tests
 
-Regras:
+Rules:
 
-1. Agrupe mudanças relacionadas no mesmo commit, separe mudanças de naturezas diferentes.
-2. Escreva a mensagem em português, de forma concisa, no imperativo.
-3. Se mudanças em um mesmo arquivo forem de naturezas diferentes (ex.: `feat` e `fix` intercalados no mesmo arquivo), combine em um único commit coerente.
-4. Não faça commit sem que o usuário peça explicitamente.
-5. Antes de commitar, rode a verificação descrita abaixo.
+1. Group related changes into the same commit; split changes of different natures.
+2. Write the message in Portuguese, concise, in the imperative mood.
+3. If changes to the same file are of different natures (e.g., `feat` and `fix` interleaved in the same file), combine them into a single coherent commit.
+4. Do not commit unless the user explicitly asks.
+5. Before committing, run the verification described below.
 
-## Verificação
+## Verification
 
-Rode a verificação após cada alteração e antes de commit ou PR:
+Run the verification after every change and before a commit or PR:
 
-- Tipos e build do frontend: `npx tsc --noEmit && npx vite build`
-  - É o mesmo que `npm run build`, sem o passo intermediário desnecessário.
-- Backend Rust: `cargo check --manifest-path src-tauri\Cargo.toml`
-  - Necessário apenas quando a alteração tocar `src-tauri/`.
-- Lint e testes automatizados: não configurados neste projeto. Não invente comandos.
+- Frontend types and build: `npm run typecheck && npx vite build`
+  - `npm run typecheck` covers `tsconfig.json` and `tsconfig.node.json` (the
+    second one type-checks `vite.config.ts`).
+  - If `npx` is unavailable in the environment, use the local binaries:
+    `.\node_modules\.bin\tsc.cmd --noEmit`,
+    `.\node_modules\.bin\tsc.cmd -p tsconfig.node.json --noEmit` and
+    `.\node_modules\.bin\vite.cmd build`.
+- Rust formatting: `cargo fmt --manifest-path src-tauri\Cargo.toml -- --check`
+- Rust backend: `cargo check --manifest-path src-tauri\Cargo.toml`
+  - Only required when the change touches `src-tauri/`.
+- Lint and automated tests: not configured in this project. Do not invent commands.
 
-Notas:
+Notes:
 
-- `npm run clean:tauri` falha se o `presenter.exe` estiver em execução (lock de arquivo no Windows).
-- Ao alterar versões em `src-tauri/Cargo.toml`, sincronize o `Cargo.lock` com `cargo update --manifest-path src-tauri\Cargo.toml -p <crate>`.
+- `npm run clean:tauri` fails while `presenter.exe` is running (file lock on Windows).
+- When changing versions in `src-tauri/Cargo.toml`, sync `Cargo.lock` with `cargo update --manifest-path src-tauri\Cargo.toml -p <crate>`.
