@@ -81,10 +81,9 @@ Opções:
 
 Formatos suportados:
   Debian/Ubuntu/Mint    .deb      (via apt-get)
-  Fedora/RHEL           .rpm      (via dnf)
   Demais distros        .AppImage (em /opt/presenter, symlink em /usr/local/bin)
 
-Distros sem pacote próprio (Arch, openSUSE, ...) recebem o AppImage.
+Distros sem pacote próprio (Fedora, Arch, openSUSE, ...) recebem o AppImage.
 
 Variáveis de ambiente:
   NO_COLOR      Desativa as cores na Saida
@@ -172,7 +171,6 @@ fi
 # Base: ID. Complemento: ID_LIKE (trata Debian-like, que costuma citar o ID).
 case "${ID:-} ${ID_LIKE:-}" in
     *debian*|*ubuntu*) DISTRO_FAMILY="debian" ;;
-    *fedora*|*rhel*)   DISTRO_FAMILY="fedora" ;;
     *)                 DISTRO_FAMILY="other"  ;;
 esac
 
@@ -214,14 +212,12 @@ fi
 # ---------------------------------------------------------------------------
 
 # Padrões de sufixo por familia e arquitetura.
-# O Tauri nomeia o .deb como _amd64.deb mas o .rpm como -1.x86_64.rpm,
-# então casamos por sufixo em vez de montar o nome exato.
+# O Tauri nomeia o .deb como _amd64.deb, então casamos por sufixo em vez de
+# montar o nome exato.
 case "${DISTRO_FAMILY}:${ARCH}" in
-    debian:amd64)   DEB_PATTERN='_amd64\.deb'   ; RPM_PATTERN='x86_64\.rpm'   ; APP_PATTERN='_amd64\.AppImage'   ;;
-    debian:arm64)   DEB_PATTERN='_arm64\.deb'   ; RPM_PATTERN='aarch64\.rpm'  ; APP_PATTERN='_arm64\.AppImage'   ;;
-    fedora:amd64)   DEB_PATTERN='_amd64\.deb'   ; RPM_PATTERN='x86_64\.rpm'   ; APP_PATTERN='_amd64\.AppImage'   ;;
-    fedora:arm64)   DEB_PATTERN='_arm64\.deb'   ; RPM_PATTERN='aarch64\.rpm'  ; APP_PATTERN='_arm64\.AppImage'   ;;
-    *)              DEB_PATTERN='_amd64\.deb'   ; RPM_PATTERN='x86_64\.rpm'   ; APP_PATTERN='_amd64\.AppImage'   ;;
+    debian:amd64)   DEB_PATTERN='_amd64\.deb'   ; APP_PATTERN='_amd64\.AppImage'   ;;
+    debian:arm64)   DEB_PATTERN='_arm64\.deb'   ; APP_PATTERN='_arm64\.AppImage'   ;;
+    *)              DEB_PATTERN='_amd64\.deb'   ; APP_PATTERN='_amd64\.AppImage'   ;;
 esac
 
 info "Consultando os artefatos de ${TAG}..."
@@ -240,7 +236,6 @@ find_asset() {
 
 case "${DISTRO_FAMILY}" in
     debian) ASSET_URL="$(find_asset "(${DEB_PATTERN})\$")" ;;
-    fedora) ASSET_URL="$(find_asset "(${RPM_PATTERN})\$")" ;;
     *)      ASSET_URL="" ;;
 esac
 
@@ -262,7 +257,7 @@ fi
 if [ -z "${ASSET_URL}" ]; then
     error "nenhum artefato compatível encontrado em ${TAG} para ${ARCH}"
     # Lista apenas pacotes Linux; .dmg/.msi/.exe sao de outras plataformas.
-    LINUX_ASSETS="$(asset_urls | sed 's#.*/##' | grep -Ei '\.(deb|rpm|appimage)$' || true)"
+    LINUX_ASSETS="$(asset_urls | sed 's#.*/##' | grep -Ei '\.(deb|appimage)$' || true)"
     if [ -n "${LINUX_ASSETS}" ]; then
         printf '\nArtefatos Linux disponíveis nesta release:\n'
         printf '%s\n' "${LINUX_ASSETS}" | sed 's/^/  - /'
@@ -376,18 +371,13 @@ if [ "${INSTALL_METHOD}" = "appimage" ]; then
     INSTALLED_BIN="${BIN_PATH}"
 else
     printf '\n'
-    # Em dry-run mostramos o comando canônico da familia detectada, sem consultar
+    # Em dry-run mostramos o comando canônico da família detectada, sem consultar
     # o sistema: o gerenciador de pacotes local pode nao existir e levaria a
-    # exibir o comando errado (ex.: rpm em um Ubuntu).
+    # exibir o comando errado.
     if [ "${DRY_RUN}" = true ]; then
-        if [ "${INSTALL_METHOD}" = "debian" ]; then
-            info "Instalando com apt-get..."
-            run_in_dir "${TMPDIR_CREATED}" ${SUDO} apt-get install -y "./${ASSET_NAME}"
-        else
-            info "Instalando com dnf..."
-            run ${SUDO} dnf install -y "${TARGET}"
-        fi
-    elif [ "${INSTALL_METHOD}" = "debian" ]; then
+        info "Instalando com apt-get..."
+        run_in_dir "${TMPDIR_CREATED}" ${SUDO} apt-get install -y "./${ASSET_NAME}"
+    else
         # apt-get resolve as dependências (libwebkit2gtk, libgtk-3, etc);
         # dpkg sozinho falharia por dependência nao satisfeita.
         if command -v apt-get >/dev/null 2>&1; then
@@ -396,14 +386,6 @@ else
         else
             warn "apt-get nao encontrado; usando dpkg"
             run ${SUDO} dpkg -i "${TARGET}"
-        fi
-    else
-        if command -v dnf >/dev/null 2>&1; then
-            info "Instalando com dnf..."
-            run ${SUDO} dnf install -y "${TARGET}"
-        else
-            warn "dnf nao encontrado; usando rpm"
-            run ${SUDO} rpm -Uvh "${TARGET}"
         fi
     fi
 
@@ -424,11 +406,11 @@ if [ -e "${INSTALLED_BIN}" ]; then
     success "Presenter ${TAG} instalado."
 else
     warn "instalação concluida, mas ${INSTALLED_BIN} nao foi encontrado."
-    warn "abra um novo terminal e rode: ${PRODUCT} --help"
+    warn "abra o app pelo menu de aplicativos ou rodando: ${PRODUCT}"
 fi
 
 printf '\n'
 printf '  %s\n' "Execute:  ${PRODUCT}"
 printf '  %s\n' "Atalhos:  F5 inicia a apresentação, Esc encerra"
-printf '  %s\n' "Desinstalar:  sudo apt remove ${PRODUCT}   (ou sudo dnf remove ${PRODUCT})"
+printf '  %s\n' "Desinstalar:  sudo apt remove ${PRODUCT}   (AppImage: sudo rm /usr/local/bin/presenter /opt/presenter/presenter.AppImage)"
 printf '\n'

@@ -24,10 +24,7 @@ param(
   [string]$Version,
 
   # Mostra o que seria feito, sem baixar nem instalar.
-  [switch]$DryRun,
-
-  # Usa o instalador .msi em vez do .exe do NSIS.
-  [switch]$Msi
+  [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,8 +61,8 @@ if (-not $arch) { $arch = "AMD64" }
 if ($env:PROCESSOR_ARCHITEW6432) { $arch = $env:PROCESSOR_ARCHITEW6432 }
 
 switch ($arch) {
-    "AMD64" { $TauriArch = "x64";   $MsiArch = "x64"   }
-    "ARM64" { $TauriArch = "arm64"; $MsiArch = "arm64" }
+    "AMD64" { $TauriArch = "x64" }
+    "ARM64" { $TauriArch = "arm64" }
     default {
         Write-Err "arquitetura nao suportada: $arch (suportado: AMD64, ARM64)"
         exit 1
@@ -110,14 +107,9 @@ if (-not $Version) {
 # Seleção do artefato
 # ---------------------------------------------------------------------------
 
-# O Tauri nomeia o NSIS como _x64-setup.exe e o MSI como _x64_en-US.msi.
-# O padrão precisa ser ancorado no final: sem isso, -Msi acabaria casando
-# com o .exe, que aparece antes na lista de assets.
-if ($Msi) {
-    $patterns = @("_$MsiArch.*\.msi$")
-} else {
-    $patterns = @("_$TauriArch-setup\.exe$", "_$MsiArch.*\.msi$")
-}
+# O Tauri nomeia o NSIS como _x64-setup.exe. O padrão é ancorado no final
+# para não casar com outros assets que contenham o nome no meio.
+$patterns = @("_$TauriArch-setup\.exe$")
 
 $asset = $null
 foreach ($p in $patterns) {
@@ -132,7 +124,7 @@ if (-not $asset) {
     Write-Host ""
     Write-Host "Instaladores disponíveis nesta release:"
     $release.assets |
-        Where-Object { $_.name -match '\.(exe|msi)$' } |
+        Where-Object { $_.name -match '\.exe$' } |
         ForEach-Object { Write-Host "  - $($_.name)" }
     Write-Host ""
     exit 1
@@ -143,13 +135,12 @@ if (-not $asset) {
 # ---------------------------------------------------------------------------
 
 $os    = [System.Environment]::OSVersion.VersionString
-$kind  = if ($asset.name -match '\.msi$') { "MSI" } else { "NSIS" }
 
 Write-Host ""
 Write-Host "Presenter $Version" -ForegroundColor Cyan
 Write-Host "  sistema:      $os"
 Write-Host "  arquitetura:  $arch"
-Write-Host "  instalador:   $($asset.name) ($kind)"
+Write-Host "  instalador:   $($asset.name) (NSIS)"
 Write-Host "  tamanho:      $([math]::Round($asset.size / 1MB, 2)) MB"
 Write-Host ""
 
@@ -189,11 +180,7 @@ try {
     # ------------------------------------------------------------------------
 
     if ($DryRun) {
-        if ($kind -eq "MSI") {
-            Write-Host "[dry-run] Start-Process msiexec -ArgumentList '/i', '$target', '/quiet', '/norestart' -Wait" -ForegroundColor Yellow
-        } else {
-            Write-Host "[dry-run] Start-Process '$target' -ArgumentList '/S' -Wait" -ForegroundColor Yellow
-        }
+        Write-Host "[dry-run] Start-Process '$target' -ArgumentList '/S' -Wait" -ForegroundColor Yellow
         Write-Host ""
         Write-Info "dry-run concluído. Nada foi instalado."
         exit 0
@@ -202,17 +189,10 @@ try {
     # O NSIS e instalado no modo currentUser (default do Tauri), que nao exige
     # privilegio de administrador. Nao ha elevação aqui de proposito: o script
     # também roda via `irm | iex`, onde nao existe arquivo para reinvocar.
-    # Se o MSI exigir, o próprio msiexec dispara o UAC.
     Write-Info "Instalando (pode levar alguns segundos)..."
 
-    if ($kind -eq "MSI") {
-        $proc = Start-Process -FilePath "msiexec.exe" `
-            -ArgumentList "/i", "`"$target`"", "/quiet", "/norestart" `
-            -Wait -PassThru
-    } else {
-        # /S e o modo silencioso do instalador NSIS gerado pelo Tauri.
-        $proc = Start-Process -FilePath $target -ArgumentList "/S" -Wait -PassThru
-    }
+    # /S e o modo silencioso do instalador NSIS gerado pelo Tauri.
+    $proc = Start-Process -FilePath $target -ArgumentList "/S" -Wait -PassThru
 
     $code = $proc.ExitCode
     if ($code -ne 0) {
