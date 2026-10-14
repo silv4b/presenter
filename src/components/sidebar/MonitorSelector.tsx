@@ -6,6 +6,8 @@ import { RefreshCw, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MonitorInfo } from "@/lib/monitors";
 
+const REFRESH_MIN_DURATION_MS = 600;
+
 function monitorLabel(m: MonitorInfo, index: number): string {
   const readable = m.name && !m.name.includes("\\") ? m.name : `Monitor ${index + 1}`;
   const primary = m.primary ? " · principal" : "";
@@ -29,7 +31,7 @@ export function MonitorSelector() {
               variant="ghost"
               onClick={async () => {
                 setRefreshing(true);
-                const min = new Promise((r) => setTimeout(r, 600));
+                const min = new Promise((r) => setTimeout(r, REFRESH_MIN_DURATION_MS));
                 await Promise.all([refreshMonitors(), min]);
                 setRefreshing(false);
               }}
@@ -48,25 +50,27 @@ export function MonitorSelector() {
       {monitors.length === 0 ? (
         <p className="text-xs text-muted-foreground">Nenhum monitor detectado</p>
       ) : (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1" role="group" aria-label="Monitores da tela de projeção">
           {monitors.map((m, i) => {
             const checked = selectedMonitors.includes(m.id);
             const primaryChecked = selectedMonitors.some((id) => monitors.find((mm) => mm.id === id)?.primary);
             const disabled = primaryChecked && !m.primary;
             return (
-<button
-              key={m.id}
-              type="button"
-              onClick={() => selectMonitor(m.id)}
-              disabled={disabled}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors cursor-pointer",
-                checked
-                  ? "bg-primary/10 text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
-              )}
-            >
+              <button
+                key={m.id}
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                onClick={() => selectMonitor(m.id)}
+                disabled={disabled}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors cursor-pointer",
+                  checked
+                    ? "bg-primary/10 text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
+                )}
+              >
                 <div
                   className={cn(
                     "flex size-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
@@ -74,6 +78,7 @@ export function MonitorSelector() {
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-muted-foreground/40",
                   )}
+                  aria-hidden="true"
                 >
                   {checked && (
                     <svg className="size-3" viewBox="0 0 12 12" fill="none">

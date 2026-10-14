@@ -5,9 +5,6 @@ export interface MonitorInfo {
   name: string | null;
   width: number;
   height: number;
-  x: number;
-  y: number;
-  scaleFactor: number;
   primary: boolean;
 }
 
@@ -21,6 +18,11 @@ export async function getMonitorConfig(): Promise<string[]> {
 
 export async function setMonitorConfig(ids: string[]): Promise<void> {
   await invoke("set_monitor_config", { ids });
+}
+
+// Sem isso o Rust continua servindo o documento anterior para a projeção.
+export async function clearDocument(): Promise<void> {
+  await invoke("clear_document");
 }
 
 export async function openProjections(monitorIds: string[]): Promise<void> {

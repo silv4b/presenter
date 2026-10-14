@@ -6,9 +6,8 @@ import { Play, Square, MonitorOff, Sun } from "lucide-react";
 export function PresentationControls() {
   const { docName, isPresenting, blackScreen, whiteScreen, monitors, selectedMonitors, startPresentation, stopPresentation, toggleBlackScreen, toggleWhiteScreen } = usePresentation();
 
-  const hasExternalMonitors = monitors.length > 1;
-  const noMonitorSelected = selectedMonitors.length === 0;
-  const canStart = !isPresenting && hasExternalMonitors && noMonitorSelected;
+  const needsMonitorSelection = monitors.length > 1 && selectedMonitors.length === 0;
+  const startDisabled = !isPresenting && needsMonitorSelection;
 
   if (!docName) return null;
 
@@ -18,7 +17,7 @@ export function PresentationControls() {
         <TooltipTrigger asChild>
           <Button
             className="w-full cursor-pointer"
-            disabled={canStart}
+            disabled={startDisabled}
             onClick={isPresenting ? stopPresentation : startPresentation}
           >
             {isPresenting ? (
@@ -37,7 +36,7 @@ export function PresentationControls() {
         <TooltipContent side="right">
           {isPresenting
             ? "Encerrar apresentação na tela de projeção"
-            : hasExternalMonitors && noMonitorSelected
+            : needsMonitorSelection
               ? "Selecione pelo menos um monitor na lista abaixo"
               : "Abrir a tela de projeção em tela cheia"}
         </TooltipContent>
