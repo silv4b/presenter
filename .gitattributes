@@ -1,0 +1,27 @@
+# Normaliza o fim de linha de todo arquivo de texto para LF no repositorio.
+# Sem isso, com core.autocrlf=true no Windows, o git avisa "LF will be replaced
+# by CRLF" a cada git add e o working tree fica com EOL misto.
+* text=auto eol=lf
+
+# Binarios: nunca converter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.exe binary
+*.msi binary
+
+# CRLF opcional: o Windows aceita LF, mas o Notepad antigo precisa de CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Preserva LF em scripts de shell: CRLF quebra a execucao no Linux.
+*.sh text eol=lf
+
+# Preserva LF em scripts PowerShell: CRLF quebra a execucao.
+*.ps1 text eol=lf

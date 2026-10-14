@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Page } from "@/lib/pdf";
 import { cn } from "@/lib/utils";
 
+// Limites e passo do zoom ficam aqui: os atalhos do App e o wheel do palco
+// precisam aplicar exatamente o mesmo próximo valor.
+export const ZOOM_MIN = 0.25;
+export const ZOOM_MAX = 4;
+export const ZOOM_STEP = 0.1;
+
 export interface StageMetrics {
   scale: number;
   pageSize: { w: number; h: number };
@@ -13,18 +19,26 @@ interface PdfStageProps {
   zoom?: number;
   className?: string;
   overlay?: (metrics: StageMetrics) => ReactNode;
-  pdfCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
   backgroundColor?: string;
+  onWheelZoom?: (delta: number) => void;
 }
 
-export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, pdfCanvasRef, backgroundColor = "#000000" }: PdfStageProps) {
+export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, backgroundColor = "#000000", onWheelZoom }: PdfStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [container, setContainer] = useState({ w: 0, h: 0 });
   const [pageSize, setPageSize] = useState<{ w: number; h: number } | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
   const panningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const panCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      panCleanupRef.current?.();
+    };
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -61,11 +75,22 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
     setPan({ x: 0, y: 0 });
   }, [zoom, pageNumber]);
 
+  const handleContainerWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (!onWheelZoom) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      onWheelZoom(e.deltaY);
+    },
+    [onWheelZoom],
+  );
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (!spaceHeld || zoom <= 1) return;
       e.preventDefault();
       panningRef.current = true;
+      setIsPanning(true);
       panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
       const onMouseMove = (ev: MouseEvent) => {
         if (!panningRef.current) return;
@@ -73,13 +98,19 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
         const dy = ev.clientY - panStartRef.current.y;
         setPan({ x: panStartRef.current.panX + dx, y: panStartRef.current.panY + dy });
       };
-      const onMouseUp = () => {
-        panningRef.current = false;
+      const cleanup = () => {
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
       };
+      const onMouseUp = () => {
+        panningRef.current = false;
+        setIsPanning(false);
+        panCleanupRef.current = null;
+        cleanup();
+      };
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);
+      panCleanupRef.current = cleanup;
     },
     [spaceHeld, zoom, pan.x, pan.y],
   );
@@ -115,10 +146,11 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
       className={cn(
         "relative flex h-full w-full items-center justify-center overflow-hidden",
         canPan && "cursor-grab",
-        panningRef.current && "cursor-grabbing",
+        isPanning && "cursor-grabbing",
         className,
       )}
       style={{ backgroundColor }}
+      onWheel={handleContainerWheel}
       onMouseDown={handleMouseDown}
     >
       <div
@@ -149,7 +181,6 @@ export function PdfStage({ pageNumber, numPages, zoom = 1, className, overlay, p
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
                 loading={null}
-                canvasRef={p === pageNumber ? pdfCanvasRef : undefined}
                 onLoadSuccess={(page) => {
                   if (p === pageNumber) {
                     const vp = page.getViewport({ scale: 1 });

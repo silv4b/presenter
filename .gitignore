@@ -11,6 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Coverage
+coverage/
 
 # Editor directories and files
 .vscode/*
@@ -24,4 +33,8 @@ dist-ssr
 *.sw?
 
 # Local scripts
-scripts/
+scripts/*
+!scripts/portable.js
+
+# Portable build output
+portable/

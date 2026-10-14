@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePresentation } from "@/state/presentation";
@@ -6,6 +6,8 @@ import { usePresenterAnnotations } from "@/state/annotations";
 import { ColorPicker } from "@/components/ColorPicker";
 import { cn } from "@/lib/utils";
 import {
+  PEN_COLOR,
+  HIGHLIGHTER_COLOR,
   PEN_SIZE as DEFAULT_PEN,
   HIGHLIGHTER_SIZE as DEFAULT_HIGHLIGHTER,
   ERASER_RADIUS as DEFAULT_ERASER,
@@ -43,9 +45,7 @@ export function AnnotationToolbar() {
   } = usePresenterAnnotations();
 
   const docLoaded = !!docDataUrl;
-  const lastPickedRef = useRef<string | null>(null);
   const [colorResetKey, setColorResetKey] = useState(0);
-  const [colorCustomized, setColorCustomized] = useState(false);
 
   const tools = [
     { tool: "laser" as const, Icon: MousePointer2, label: "Laser (L)", sizeLabel: "\u00a0" },
@@ -55,7 +55,8 @@ export function AnnotationToolbar() {
   ];
 
   const showColorPicker = docLoaded && (activeTool === "pen" || activeTool === "highlighter");
-  const isDefault = penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER && !colorCustomized;
+  const colorsAreDefault = penColor === PEN_COLOR && highlighterColor === HIGHLIGHTER_COLOR;
+  const isDefault = penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER && colorsAreDefault;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -63,13 +64,11 @@ export function AnnotationToolbar() {
         <ColorPicker
           key={colorResetKey}
           value={activeTool === "pen" ? penColor : highlighterColor}
-          defaultColor={activeTool === "pen" ? "#ef4444" : "#eab308"}
+          defaultColor={activeTool === "pen" ? PEN_COLOR : HIGHLIGHTER_COLOR}
           onChange={(c) => {
-            lastPickedRef.current = c;
             if (activeTool === "pen") setPenColor(c);
             else setHighlighterColor(c);
           }}
-          onCustomize={() => setColorCustomized(true)}
         />
       </div>
       <div className="flex items-start justify-center gap-2">
@@ -102,7 +101,7 @@ export function AnnotationToolbar() {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); setColorCustomized(false); }}
+                onClick={() => { resetToolSizes(); resetColors(); setColorResetKey((k) => k + 1); }}
                 disabled={!docLoaded || isDefault}
                 aria-label="Restaurar tamanhos padrão"
                 className="cursor-pointer"
@@ -134,7 +133,7 @@ export function AnnotationToolbar() {
                 <Redo2 className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">Refazer (Ctrl+Shift+Z)</TooltipContent>
+            <TooltipContent side="top">Refazer (Ctrl+Y)</TooltipContent>
           </Tooltip>
           <span className="h-3 text-[10px] leading-none tabular-nums text-muted-foreground">&nbsp;</span>
         </div>

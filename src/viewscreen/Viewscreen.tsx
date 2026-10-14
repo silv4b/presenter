@@ -6,19 +6,26 @@ import { AnnotationLayer } from "@/components/AnnotationLayer";
 import { useViewscreenAnnotations } from "@/state/annotations";
 import {
   EVENT_SLIDE_CHANGE,
+  EVENT_ZOOM_CHANGE,
   EVENT_BLACK_SCREEN,
   EVENT_WHITE_SCREEN,
+  EVENT_VIEWSCREEN_READY,
+  emitSafe,
   type SlideChangePayload,
 } from "@/lib/shared";
+import { BG_COLOR_KEY, DEFAULT_BG_COLOR, THEME_KEY } from "@/hooks/useSettings";
+import { readHexColor, readRaw } from "@/lib/storage";
 
 export default function Viewscreen() {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(1);
+  const [zoom, setZoom] = useState(1);
   const [black, setBlack] = useState(false);
   const [white, setWhite] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bgColor, setBgColor] = useState(() => localStorage.getItem("presenter.backgroundColor") ?? "#000000");
+  // Mesma validação do presenter: um hex inválido quebraria o style do palco.
+  const [bgColor, setBgColor] = useState(() => readHexColor(BG_COLOR_KEY, DEFAULT_BG_COLOR));
   const { strokesByPage, laser } = useViewscreenAnnotations();
 
   useEffect(() => {
@@ -44,34 +51,44 @@ export default function Viewscreen() {
   useEffect(() => {
     let disposed = false;
     const unlisteners: UnlistenFn[] = [];
-    listen<SlideChangePayload>(EVENT_SLIDE_CHANGE, (e) => {
-      setPage(e.payload.page);
-    }).then((u) => {
-      if (disposed) u();
-      else unlisteners.push(u);
+
+    const listeners = [
+      listen<SlideChangePayload>(EVENT_SLIDE_CHANGE, (e) => setPage(e.payload.page)),
+      listen<{ zoom: number }>(EVENT_ZOOM_CHANGE, (e) => setZoom(e.payload.zoom)),
+      listen<{ black: boolean }>(EVENT_BLACK_SCREEN, (e) => setBlack(e.payload.black)),
+      listen<{ white: boolean }>(EVENT_WHITE_SCREEN, (e) => setWhite(e.payload.white)),
+    ];
+
+    // Só avisa depois que os quatro listeners acima existem: é o que garante que
+    // o reenvio de slide/zoom/preto/branco feito pelo presenter não seja perdido.
+    Promise.all(listeners).then((resolved) => {
+      if (disposed) {
+        resolved.forEach((u) => u());
+        return;
+      }
+      unlisteners.push(...resolved);
+      void emitSafe(EVENT_VIEWSCREEN_READY);
     });
-    listen<{ black: boolean }>(EVENT_BLACK_SCREEN, (e) => {
-      setBlack(e.payload.black);
-    }).then((u) => {
-      if (disposed) u();
-      else unlisteners.push(u);
-    });
-    listen<{ white: boolean }>(EVENT_WHITE_SCREEN, (e) => {
-      setWhite(e.payload.white);
-    }).then((u) => {
-      if (disposed) u();
-      else unlisteners.push(u);
-    });
+
     return () => {
       disposed = true;
       unlisteners.forEach((u) => u());
     };
   }, []);
 
+  // A projeção não passa pelo useSettings, então o tema nunca chegava nela.
+  // O localStorage é compartilhado entre as duas janelas.
   useEffect(() => {
+    const applyTheme = (value: string | null) => {
+      document.documentElement.classList.toggle("dark", value === "dark");
+    };
+    applyTheme(readRaw(THEME_KEY));
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "presenter.backgroundColor" && e.newValue) {
-        setBgColor(e.newValue);
+      if (e.key === BG_COLOR_KEY) {
+        setBgColor(readHexColor(BG_COLOR_KEY, DEFAULT_BG_COLOR));
+      }
+      if (e.key === THEME_KEY) {
+        applyTheme(e.newValue);
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -100,7 +117,9 @@ export default function Viewscreen() {
           <PdfStage
             pageNumber={page}
             numPages={numPages}
+            zoom={zoom}
             className="h-full"
+            backgroundColor={bgColor}
             overlay={({ scale }) => (
               <AnnotationLayer
                 scale={scale}

@@ -1,67 +1,90 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Pause, Play, RotateCcw, Timer as TimerIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePresentation } from "@/state/presentation";
+import { formatTime, parseTimerDigits, toTimerDigits } from "@/lib/time";
+import { usePresentation, type TimerMode } from "@/state/presentation";
 
-type Mode = "stopwatch" | "countdown";
-
-// Field definitions: 4 fields, 2 digits each (except centiseconds which is display only)
-// Field 0: HH (indices 0,1) - editable
-// Field 1: MM (indices 2,3) - editable
-// Field 2: SS (indices 4,5) - editable
-// Field 3: CC (indices 6,7) - display only, smaller
+// Quatro campos de dois dígitos cada. Os centésimos são apenas exibidos.
+// Campo 0: HH (índices 0 e 1) - editável
+// Campo 1: MM (índices 2 e 3) - editável
+// Campo 2: SS (índices 4 e 5) - editável
+// Campo 3: CC (índices 6 e 7) - somente leitura, menor
+const DIGITS_PER_FIELD = 2;
 const EDITABLE_FIELD_COUNT = 3; // HH, MM, SS
+const FIELD_COUNT = 4;
+const DIGIT_COUNT = DIGITS_PER_FIELD * FIELD_COUNT; // 8 dígitos exibidos
+const CENTISECONDS_FIELD = FIELD_COUNT - 1; // campo somente leitura
+const LAST_EDITABLE_INDEX = EDITABLE_FIELD_COUNT * DIGITS_PER_FIELD - 1; // dígito 5
 
-function format(ms: number): { parts: string[] } {
-  const totalMs = Math.max(0, ms);
-  const totalSeconds = Math.floor(totalMs / 1000);
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  const centis = Math.floor((totalMs % 1000) / 10);
-  return {
-    parts: [
-      String(h).padStart(2, "0"),
-      String(m).padStart(2, "0"),
-      String(s).padStart(2, "0"),
-      String(centis).padStart(2, "0"),
-    ],
-  };
-}
+const FIELD_LABELS = ["Horas", "Minutos", "Segundos", "Centésimos"];
 
 export function Timer() {
-  const { registerTimerFunctions } = usePresentation();
+  const {
+    registerTimerFunctions,
+    timerMode: mode,
+    setTimerMode: setMode,
+    timerInitialTime,
+    setTimerInitialTime,
+  } = usePresentation();
 
-  const [mode, setMode] = useState<Mode>("stopwatch");
   const [running, setRunning] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [digits, setDigits] = useState<string[]>(["0", "0", "0", "0", "0", "0", "0", "0"]);
+  const [elapsedMs, setElapsedMs] = useState(timerInitialTime);
+  const [digits, setDigits] = useState<string[]>(() =>
+    toTimerDigits(formatTime(timerInitialTime)),
+  );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
-  const baseMsRef = useRef(0);
-  const inputRefs = useRef<Array<HTMLInputElement | null>>(new Array(8).fill(null));
+  const baseMsRef = useRef(timerInitialTime);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>(new Array(DIGIT_COUNT).fill(null));
   const isEditingRef = useRef(false);
+  // Espelho sempre atualizado dos dígitos: os handlers leem daqui para não
+  // depender do closure do render em que foram criados.
+  const digitsRef = useRef(digits);
 
   useEffect(() => {
-    registerTimerFunctions(() => setRunning((r) => !r), () => {
-      setRunning(false);
-      setActiveIndex(null);
-      baseMsRef.current = 0;
-      setElapsedMs(0);
-      setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
-    });
-  }, [registerTimerFunctions]);
+    digitsRef.current = digits;
+  }, [digits]);
 
-  // Sync digits from elapsedMs when not editing
+  /** Aplica um tempo como nova base, tanto na exibição quanto na persistência. */
+  const applyTime = useCallback((ms: number) => {
+    baseMsRef.current = ms;
+    setElapsedMs(ms);
+    setTimerInitialTime(ms);
+  }, [setTimerInitialTime]);
+
+  const reset = useCallback(() => {
+    setRunning(false);
+    setActiveIndex(null);
+    isEditingRef.current = false;
+    baseMsRef.current = timerInitialTime;
+    setElapsedMs(timerInitialTime);
+    setDigits(toTimerDigits(formatTime(timerInitialTime)));
+  }, [timerInitialTime]);
+
+  useEffect(() => {
+    registerTimerFunctions(() => setRunning((r) => !r), reset);
+  }, [registerTimerFunctions, reset]);
+
+  // Reflete mudanças externas (ex.: diálogo de configurações) quando o
+  // cronômetro está parado.
+  useEffect(() => {
+    if (running || activeIndex !== null) return;
+    if (timerInitialTime === baseMsRef.current) return;
+    baseMsRef.current = timerInitialTime;
+    setElapsedMs(timerInitialTime);
+    setDigits(toTimerDigits(formatTime(timerInitialTime)));
+  }, [timerInitialTime, running, activeIndex]);
+
+  // Mantém os dígitos em dia com o tempo exibido quando não há edição.
   useEffect(() => {
     if (activeIndex !== null) return;
-    const { parts } = format(elapsedMs);
-    setDigits(parts.flatMap((p) => p.split("")));
+    setDigits(toTimerDigits(formatTime(elapsedMs)));
   }, [elapsedMs, activeIndex]);
 
-  // Focus active input when activeIndex changes
+  // Foca e seleciona o input correspondente quando o campo ativo muda.
   useEffect(() => {
     if (activeIndex !== null && inputRefs.current[activeIndex]) {
       const input = inputRefs.current[activeIndex]!;
@@ -70,15 +93,23 @@ export function Timer() {
     }
   }, [activeIndex]);
 
-  // Global keyboard handler for timer editing (captures arrows when editing)
+  // Aplica os dígitos e encerra a edição. Lê sempre do espelho para que o
+  // closure usado pelo handler global não fique defasado.
+  const applyDigits = useCallback(() => {
+    applyTime(parseTimerDigits(digitsRef.current));
+    setActiveIndex(null);
+    isEditingRef.current = false;
+  }, [applyTime]);
+
+  // Handler global de teclado durante a edição: absorve as setas, o Tab e o
+  // Enter/Escape, que são tratados pelos atalhos globais do app.
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (!isEditingRef.current || activeIndex === null) return;
-      
-      const fieldIdx = Math.floor(activeIndex / 2);
-      const isCentiseconds = fieldIdx === 3;
-      if (isCentiseconds) return; // Don't handle keys for centiseconds
-      
+
+      const fieldIdx = Math.floor(activeIndex / DIGITS_PER_FIELD);
+      if (fieldIdx === CENTISECONDS_FIELD) return; // Centésimos não são editáveis.
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         e.stopPropagation();
@@ -88,24 +119,16 @@ export function Timer() {
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         e.stopPropagation();
-        if (activeIndex < 5) { // Only up to SS (index 5)
+        if (activeIndex < LAST_EDITABLE_INDEX) {
           setActiveIndex(activeIndex + 1);
         }
       } else if (e.key === "Tab") {
         e.preventDefault();
         e.stopPropagation();
         if (e.shiftKey) {
-          if (activeIndex > 0) {
-            setActiveIndex(activeIndex - 1);
-          } else {
-            setActiveIndex(5); // Circular: first digit -> last digit
-          }
+          setActiveIndex(activeIndex > 0 ? activeIndex - 1 : LAST_EDITABLE_INDEX);
         } else {
-          if (activeIndex < 5) {
-            setActiveIndex(activeIndex + 1);
-          } else {
-            setActiveIndex(0); // Circular: last digit -> first digit
-          }
+          setActiveIndex(activeIndex < LAST_EDITABLE_INDEX ? activeIndex + 1 : 0);
         }
       } else if (e.key === "Enter" || e.key === "Escape") {
         e.preventDefault();
@@ -116,7 +139,7 @@ export function Timer() {
 
     document.addEventListener("keydown", handleGlobalKeyDown, true);
     return () => document.removeEventListener("keydown", handleGlobalKeyDown, true);
-  }, [activeIndex]);
+  }, [activeIndex, applyDigits]);
 
   useEffect(() => {
     if (!running) return;
@@ -130,7 +153,7 @@ export function Timer() {
         if (remaining <= 0) {
           setRunning(false);
           setElapsedMs(0);
-          setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
+          setDigits(new Array(DIGIT_COUNT).fill("0"));
           return;
         }
       } else {
@@ -145,75 +168,58 @@ export function Timer() {
     };
   }, [running, mode]);
 
-  const reset = () => {
-    setRunning(false);
-    setActiveIndex(null);
-    isEditingRef.current = false;
-    baseMsRef.current = 0;
-    setElapsedMs(0);
-    setDigits(["0", "0", "0", "0", "0", "0", "0", "0"]);
-  };
-
-  const switchMode = (next: Mode) => {
+  const switchMode = (next: TimerMode) => {
     setRunning(false);
     setActiveIndex(null);
     isEditingRef.current = false;
     setMode(next);
-    // Preserve current time when switching modes
-    const ms = elapsedMs;
-    baseMsRef.current = ms;
-    setElapsedMs(ms);
-    const { parts } = format(ms);
-    setDigits(parts.flatMap((p) => p.split("")));
+    // Preserva o tempo atual ao trocar de modo.
+    applyTime(elapsedMs);
   };
 
   const advanceIfNeeded = (index: number) => {
-    const fieldIdx = Math.floor(index / 2);
-    const digitInField = index % 2;
+    const fieldIdx = Math.floor(index / DIGITS_PER_FIELD);
+    const digitInField = index % DIGITS_PER_FIELD;
     if (fieldIdx < EDITABLE_FIELD_COUNT && digitInField === 1) {
-      const nextFieldStart = (fieldIdx + 1) * 2;
-      if (nextFieldStart < 6) setActiveIndex(nextFieldStart);
-    } else if (index < 5) {
+      const nextFieldStart = (fieldIdx + 1) * DIGITS_PER_FIELD;
+      if (nextFieldStart < DIGIT_COUNT) setActiveIndex(nextFieldStart);
+    } else if (index < LAST_EDITABLE_INDEX) {
       setActiveIndex(index + 1);
     }
   };
 
-  const applyDigitsImmediate = () => {
-    const timeStr = digits.join("");
-    const h = parseInt(timeStr.slice(0, 2), 10);
-    const m = parseInt(timeStr.slice(2, 4), 10);
-    const s = parseInt(timeStr.slice(4, 6), 10);
-    const cc = parseInt(timeStr.slice(6, 8), 10);
-    const totalMs = (h * 3600 + m * 60 + s) * 1000 + cc * 10;
-    baseMsRef.current = totalMs;
-    setElapsedMs(totalMs);
-  };
+  /** Escreve o dígito e aplica o tempo resultante, sem esperar o próximo render. */
+  const commitDigit = useCallback(
+    (nextDigits: string[]) => {
+      setDigits(nextDigits);
+      digitsRef.current = nextDigits;
+      applyTime(parseTimerDigits(nextDigits));
+    },
+    [applyTime],
+  );
 
   const handleDigitChange = (index: number, value: string) => {
     if (!/^\d?$/.test(value)) return;
-    const nextDigits = [...digits];
+    const nextDigits = [...digitsRef.current];
     nextDigits[index] = value || "0";
-    setDigits(nextDigits);
-    applyDigitsImmediate();
+    commitDigit(nextDigits);
   };
 
   const handleDigitKeyDown = (e: React.KeyboardEvent, index: number) => {
     const key = e.key;
     if (/^\d$/.test(key)) {
-      const nextDigits = [...digits];
+      const nextDigits = [...digitsRef.current];
       nextDigits[index] = key;
-      setDigits(nextDigits);
+      commitDigit(nextDigits);
       advanceIfNeeded(index);
-      applyDigitsImmediate();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    const fieldIdx = Math.floor(index / 2);
-    const isCentiseconds = fieldIdx === 3;
-    
-    // Don't handle keys for centiseconds
-    if (isCentiseconds) return;
+    const fieldIdx = Math.floor(index / DIGITS_PER_FIELD);
+
+    // Centésimos não são editáveis.
+    if (fieldIdx === CENTISECONDS_FIELD) return;
 
     if (e.key === "ArrowLeft") {
       e.preventDefault();
@@ -224,50 +230,29 @@ export function Timer() {
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
       e.stopPropagation();
-      if (index < 5) {
+      if (index < LAST_EDITABLE_INDEX) {
         setActiveIndex(index + 1);
       }
     } else if (e.key === "Tab") {
       e.preventDefault();
       e.stopPropagation();
       if (e.shiftKey) {
-        if (index > 0) {
-          setActiveIndex(index - 1);
-        } else {
-          setActiveIndex(5);
-        }
+        setActiveIndex(index > 0 ? index - 1 : LAST_EDITABLE_INDEX);
       } else {
-        if (index < 5) {
-          setActiveIndex(index + 1);
-        } else {
-          setActiveIndex(0);
-        }
+        setActiveIndex(index < LAST_EDITABLE_INDEX ? index + 1 : 0);
       }
     } else if (e.key === "Enter" || e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       applyDigits();
     } else if (e.key === "Backspace") {
-      // Allow backspace to clear and move left
-      if (!digits[index] && index > 0) {
+      // Permite apagar e voltar um dígito.
+      if (!digitsRef.current[index] && index > 0) {
         e.preventDefault();
         e.stopPropagation();
         setActiveIndex(index - 1);
       }
     }
-  };
-
-  const applyDigits = () => {
-    const timeStr = digits.join("");
-    const h = parseInt(timeStr.slice(0, 2), 10);
-    const m = parseInt(timeStr.slice(2, 4), 10);
-    const s = parseInt(timeStr.slice(4, 6), 10);
-    const cc = parseInt(timeStr.slice(6, 8), 10);
-    const totalMs = (h * 3600 + m * 60 + s) * 1000 + cc * 10;
-    baseMsRef.current = totalMs;
-    setElapsedMs(totalMs);
-    setActiveIndex(null);
-    isEditingRef.current = false;
   };
 
   const handleBlur = () => {
@@ -278,12 +263,11 @@ export function Timer() {
 
   const handleClick = (index: number) => {
     if (running) return;
-    const fieldIdx = Math.floor(index / 2);
-    if (fieldIdx === 3) return; // Don't edit centiseconds
-    
-    // Click on any digit -> select LEFTMOST digit of that field
-    const fieldStart = fieldIdx * 2;
-    setActiveIndex(fieldStart);
+    const fieldIdx = Math.floor(index / DIGITS_PER_FIELD);
+    if (fieldIdx === CENTISECONDS_FIELD) return; // Centésimos não são editáveis.
+
+    // Clicar em qualquer dígito seleciona o mais à esquerda do campo.
+    setActiveIndex(fieldIdx * 2);
     isEditingRef.current = true;
   };
 
@@ -293,7 +277,8 @@ export function Timer() {
   };
 
   const expired = mode === "countdown" && elapsedMs === 0 && !running;
-  const { parts } = format(elapsedMs);
+  const parts = ["hours", "minutes", "seconds", "centiseconds"] as const;
+  const time = formatTime(elapsedMs);
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
@@ -310,13 +295,13 @@ export function Timer() {
         )}
         onBlur={handleBlur}
       >
-        <span className="flex items-baseline gap-0">
+        <span className="flex items-baseline gap-0" role="group" aria-label="Tempo do cronômetro">
           {parts.map((part, partIndex) => (
-            <span key={partIndex} className="flex items-center gap-0">
-              {part.split("").map((_, digitIndex) => {
-                const globalIndex = partIndex * 2 + digitIndex;
+            <span key={part} className="flex items-center gap-0">
+              {time[part].split("").map((_, digitIndex) => {
+                const globalIndex = partIndex * DIGITS_PER_FIELD + digitIndex;
                 const fieldIdx = partIndex;
-                const isCentiseconds = fieldIdx === 3;
+                const isCentiseconds = fieldIdx === CENTISECONDS_FIELD;
                 const isEditable = fieldIdx < EDITABLE_FIELD_COUNT && !running;
                 return (
                   <input
@@ -331,13 +316,14 @@ export function Timer() {
                     onBlur={handleBlur}
                     maxLength={1}
                     inputMode="numeric"
+                    aria-label={`${FIELD_LABELS[fieldIdx]}, dígito ${digitIndex + 1} de 2`}
                     className={cn(
                       "text-center bg-transparent border-none outline-none text-inherit",
                       activeIndex === globalIndex && "bg-muted",
                       isCentiseconds && "text-muted-foreground/60",
                     )}
-                    style={{ 
-                      font: "inherit", 
+                    style={{
+                      font: "inherit",
                       textAlign: "center",
                       width: isCentiseconds ? "1.25rem" : "1.75rem",
                     }}
@@ -346,29 +332,24 @@ export function Timer() {
                   />
                 );
               })}
-              {partIndex < 3 && <span className="text-muted-foreground px-0.5">:</span>}
+              {partIndex < FIELD_COUNT - 1 && <span className="text-muted-foreground px-0.5">:</span>}
             </span>
           ))}
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => switchMode("stopwatch")}
-          className={cn(mode === "stopwatch" && "bg-muted", "cursor-pointer")}
-        >
-          Progressivo
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => switchMode("countdown")}
-          className={cn(mode === "countdown" && "bg-muted", "cursor-pointer")}
-        >
-          Regressivo
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-medium text-foreground">Regressivo</span>
+          <span className="text-[0.7rem] text-muted-foreground">
+            {mode === "countdown" ? "Conta até zero" : "Conta a partir de zero"}
+          </span>
+        </div>
+        <Switch
+          checked={mode === "countdown"}
+          onCheckedChange={(checked) => switchMode(checked ? "countdown" : "stopwatch")}
+          aria-label="Alternar modo regressivo"
+        />
       </div>
 
       <div className="flex items-center gap-1">

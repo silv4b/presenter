@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import { cn } from "@/lib/utils";
+import { HexInput } from "@/components/HexInput";
 
-const PICKER_WIDTH = 222;
+const PICKER_WIDTH = 222; // largura padrão do react-colorful
 const PICKER_MARGIN = 8;
+const PICKER_GAP = 10;
+const PICKER_Z_INDEX = 50;
+const PICKER_LEFT_OFFSET = -700; // deslocamento empírico que aproxima o popup do seletor
 
 const PRESET_COLORS = [
   "#ef4444",
@@ -14,17 +18,24 @@ const PRESET_COLORS = [
   "#a855f7",
 ];
 
+const PRESET_LABELS = [
+  "Vermelho",
+  "Laranja",
+  "Amarelo",
+  "Verde",
+  "Azul",
+  "Roxo",
+];
+
 interface ColorPickerProps {
   value?: string;
   defaultColor?: string;
   onChange: (color: string) => void;
-  onCustomize?: () => void;
   variant?: "default" | "dark";
   disabled?: boolean;
-  onEditingChange?: (editing: boolean) => void;
 }
 
-export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, onCustomize, variant = "default", disabled, onEditingChange }: ColorPickerProps) {
+export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, variant = "default", disabled }: ColorPickerProps) {
   const [editing, setEditing] = useState(false);
   const initialColor = value ?? defaultColor;
   const [activeIndex, setActiveIndex] = useState(() => {
@@ -36,17 +47,12 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
     if (PRESET_COLORS.indexOf(initialColor) >= 0) return {} as Record<number, string>;
     return { 0: initialColor };
   });
-  const [hexInput, setHexInput] = useState("");
   const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
   const pickerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const circlesRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const onCustomizeRef = useRef(onCustomize);
-  onCustomizeRef.current = onCustomize;
-  const onEditingChangeRef = useRef(onEditingChange);
-  onEditingChangeRef.current = onEditingChange;
   const customColorsRef = useRef(customColors);
   customColorsRef.current = customColors;
 
@@ -66,14 +72,6 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
       }
     }
   }, [value]);
-
-  useEffect(() => {
-    onEditingChangeRef.current?.(editing);
-  }, [editing]);
-
-  useEffect(() => {
-    setHexInput(currentColor.replace("#", "").toUpperCase());
-  }, [currentColor]);
 
   useEffect(() => {
     if (!editing) return;
@@ -96,15 +94,15 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
     const halfPicker = PICKER_WIDTH / 2;
     const margin = PICKER_MARGIN;
 
-    let left = centerX - halfPicker - 700;
+    let left = centerX - halfPicker + PICKER_LEFT_OFFSET;
     if (left < margin) left = margin;
     if (left + PICKER_WIDTH > window.innerWidth - margin) {
       left = window.innerWidth - margin - PICKER_WIDTH;
     }
 
-    const top = rect.bottom + 10;
+    const top = rect.bottom + PICKER_GAP;
 
-    setPickerStyle({ position: "fixed", left, top, width: PICKER_WIDTH, zIndex: 50 });
+    setPickerStyle({ position: "fixed", left, top, width: PICKER_WIDTH, zIndex: PICKER_Z_INDEX });
   }, []);
 
   useLayoutEffect(() => {
@@ -119,7 +117,7 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
     window.addEventListener("scroll", handleScroll, true);
     return () => {
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [editing, clampPickerPosition]);
 
@@ -138,7 +136,6 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
   const handleColorChange = (color: string) => {
     setCurrentColor(color);
     setCustomColors((prev) => ({ ...prev, [activeIndex]: color }));
-    onCustomizeRef.current?.();
     onChangeRef.current(color);
   };
 
@@ -153,30 +150,18 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
       onPointerDown={(e) => e.stopPropagation()}
     >
       <HexColorPicker color={currentColor} onChange={handleColorChange} />
-      <input
-        type="text"
-        value={hexInput}
-        onChange={(e) => {
-          const raw = e.target.value.replace("#", "");
-          if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
-            setHexInput(raw.toUpperCase());
-            if (raw.length === 6) {
-              handleColorChange(`#${raw}`);
-            }
-          }
-        }}
+      <HexInput
+        color={currentColor}
+        onChange={handleColorChange}
         onKeyDown={(e) => {
           if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
           if (e.key === "Enter") setEditing(false);
         }}
-        maxLength={6}
         className={cn(
-          "mt-2 w-full rounded border px-2 py-1.5 font-mono text-xs outline-none",
           variant === "dark"
             ? "border-white/20 bg-white/10 text-white placeholder-white/40"
             : "border-border bg-muted text-foreground placeholder-muted-foreground",
         )}
-        placeholder="000000"
       />
     </div>
   );
@@ -199,6 +184,9 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
                 )}
                 style={{ backgroundColor: bg }}
                 onClick={() => handleCircleClick(c, i)}
+                title={PRESET_LABELS[i]}
+                aria-label={PRESET_LABELS[i]}
+                aria-pressed={isActive}
               />
             );
           })}
@@ -225,6 +213,9 @@ export function ColorPicker({ value, defaultColor = PRESET_COLORS[0], onChange, 
               )}
               style={{ backgroundColor: bg }}
               onClick={() => handleCircleClick(c, i)}
+              title={PRESET_LABELS[i]}
+              aria-label={PRESET_LABELS[i]}
+              aria-pressed={isActive}
             />
           );
         })}

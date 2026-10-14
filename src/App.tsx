@@ -5,18 +5,21 @@ import { PresentationProvider, usePresentation } from "@/state/presentation";
 import { AnnotationsProvider, usePresenterAnnotations } from "@/state/annotations";
 import { Document } from "@/lib/pdf";
 import { Sidebar } from "@/components/Sidebar";
-import { PdfStage } from "@/components/PdfStage";
-import { SlideCarousel } from "@/components/SlideCarousel";
+import { PdfStage, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP } from "@/components/PdfStage";
+import { SlideCarousel, CAROUSEL_MIN_HEIGHT, CAROUSEL_MAX_HEIGHT, CAROUSEL_DEFAULT_HEIGHT } from "@/components/SlideCarousel";
 import { Welcome } from "@/components/Welcome";
 import { AnnotationLayerContainer } from "@/components/AnnotationLayerContainer";
 import { FloatingControls } from "@/components/FloatingControls";
-import { PreviewPanel } from "@/components/PreviewPanel";
+import { PreviewPanel, PREVIEW_MIN_WIDTH, PREVIEW_MAX_WIDTH } from "@/components/PreviewPanel";
 import { PanelRightOpen, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clamp } from "@/lib/annotations";
+import { readBoolean, readNumber, writeStorage } from "@/lib/storage";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { useSettings } from "@/hooks/useSettings";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { EVENT_APP_CLOSE_REQUESTED, EVENT_VIEWSCREEN_READY, EVENT_ZOOM_CHANGE, emitSafe } from "@/lib/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,9 +37,9 @@ const CAROUSEL_HEIGHT_KEY = "presenter.carouselHeight";
 const CAROUSEL_VISIBLE_KEY = "presenter.carouselVisible";
 const SIDEBAR_VISIBLE_KEY = "presenter.sidebarVisible";
 
-const ZOOM_MIN = 0.25;
-const ZOOM_MAX = 4;
-const ZOOM_STEP = 0.1;
+const ZOOM_DEFAULT = 1;
+const MS_PER_SECOND = 1000;
+const SIDEBAR_WIDTH = 320; // w-80 = 320px
 
 function PresenterShell() {
   const {
@@ -62,96 +65,126 @@ function PresenterShell() {
     openPdf,
     toggleTimer,
     resetTimer,
+    registerZoomReset,
   } = usePresentation();
 
   const annotations = usePresenterAnnotations();
   const { backgroundColor, setBackgroundColor, alwaysShowFloatingControls, setAlwaysShowFloatingControls, floatingControlsTimeout, setFloatingControlsTimeout, theme, setTheme } = useSettings();
 
-  const MIN_PREVIEW = 320;
-  const MAX_PREVIEW = 512;
-  const SIDEBAR_WIDTH = 320; // w-80 = 320px
-  const [previewWidth, setPreviewWidth] = useState(() => {
-    const saved = Number(localStorage.getItem(PREVIEW_WIDTH_KEY));
-    if (Number.isFinite(saved)) {
-      return Math.min(MAX_PREVIEW, Math.max(MIN_PREVIEW, saved));
-    }
-    return MAX_PREVIEW;
-  });
-  const [sidebarWidth] = useState(SIDEBAR_WIDTH);
-  const [showPreview, setShowPreview] = useState(() => {
-    const saved = localStorage.getItem(PREVIEW_VISIBLE_KEY);
-    return saved !== "false";
-  });
-  const [showSidebar, setShowSidebar] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_VISIBLE_KEY);
-    return saved !== "false";
-  });
+  const [previewWidth, setPreviewWidth] = useState(() =>
+    readNumber(PREVIEW_WIDTH_KEY, PREVIEW_MIN_WIDTH, PREVIEW_MAX_WIDTH, PREVIEW_MAX_WIDTH),
+  );
+  const sidebarWidth = SIDEBAR_WIDTH;
+  const [showPreview, setShowPreview] = useState(() =>
+    readBoolean(PREVIEW_VISIBLE_KEY, true),
+  );
+  const [showSidebar, setShowSidebar] = useState(() =>
+    readBoolean(SIDEBAR_VISIBLE_KEY, true),
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmExitOpen, setConfirmExitOpen] = useState(false);
   const [closePending, setClosePending] = useState(false);
   const [closeDocPending, setCloseDocPending] = useState(false);
   const [resizing, setResizing] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [carouselHeight, setCarouselHeight] = useState(() => {
-    const saved = Number(localStorage.getItem(CAROUSEL_HEIGHT_KEY));
-    if (Number.isFinite(saved)) return Math.min(300, Math.max(160, saved));
-    return 180;
-  });
-  const [showCarousel, setShowCarousel] = useState(() => {
-    const saved = localStorage.getItem(CAROUSEL_VISIBLE_KEY);
-    return saved !== "false";
-  });
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+  const [carouselHeight, setCarouselHeight] = useState(() =>
+    readNumber(CAROUSEL_HEIGHT_KEY, CAROUSEL_MIN_HEIGHT, CAROUSEL_MAX_HEIGHT, CAROUSEL_DEFAULT_HEIGHT),
+  );
+  const [showCarousel, setShowCarousel] = useState(() =>
+    readBoolean(CAROUSEL_VISIBLE_KEY, true),
+  );
   const [carouselResizing, setCarouselResizing] = useState(false);
 
-  const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previewResizeCleanupRef = useRef<(() => void) | null>(null);
 
-  const confirmExitOpenRef = useRef(false);
-  confirmExitOpenRef.current = confirmExitOpen;
-  const closePendingRef = useRef(false);
-  closePendingRef.current = closePending;
-  const settingsOpenRef = useRef(false);
-  settingsOpenRef.current = settingsOpen;
+  const annotationCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => { localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth)); }, [previewWidth]);
-  useEffect(() => { localStorage.setItem(PREVIEW_VISIBLE_KEY, String(showPreview)); }, [showPreview]);
-  useEffect(() => { localStorage.setItem(SIDEBAR_VISIBLE_KEY, String(showSidebar)); }, [showSidebar]);
-  useEffect(() => { localStorage.setItem(CAROUSEL_HEIGHT_KEY, String(carouselHeight)); }, [carouselHeight]);
-  useEffect(() => { localStorage.setItem(CAROUSEL_VISIBLE_KEY, String(showCarousel)); }, [showCarousel]);
+  useEffect(() => { writeStorage(PREVIEW_WIDTH_KEY, String(previewWidth)); }, [previewWidth]);
+  useEffect(() => { writeStorage(PREVIEW_VISIBLE_KEY, String(showPreview)); }, [showPreview]);
+  useEffect(() => { writeStorage(SIDEBAR_VISIBLE_KEY, String(showSidebar)); }, [showSidebar]);
+  useEffect(() => { writeStorage(CAROUSEL_HEIGHT_KEY, String(carouselHeight)); }, [carouselHeight]);
+  useEffect(() => { writeStorage(CAROUSEL_VISIBLE_KEY, String(showCarousel)); }, [showCarousel]);
 
+  // Um giro de wheel manda valores grandes (tipicamente ±100 por "clique"), então
+  // usamos apenas o *sinal* do delta e avançamos um passo fixo. Somar o valor
+  // bruto saturaria o zoom no mínimo/máximo a cada giro. Delta positivo = aproximar.
   const handleZoom = useCallback((delta: number) => {
-    setZoom((z) => {
-      const step = delta > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z + step));
-    });
+    if (delta === 0) return;
+    const step = delta > 0 ? ZOOM_STEP : -ZOOM_STEP;
+    setZoom((z) => clamp(z + step, ZOOM_MIN, ZOOM_MAX));
   }, []);
 
-  const handleZoomReset = useCallback(() => setZoom(1), []);
-  const handleZoomIn = useCallback(() => handleZoom(-ZOOM_STEP), [handleZoom]);
-  const handleZoomOut = useCallback(() => handleZoom(ZOOM_STEP), [handleZoom]);
-
-  const handleWheelZoom = useCallback(
-    (e: React.WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        handleZoom(e.deltaY);
-      }
-    },
-    [handleZoom],
-  );
+  const handleZoomReset = useCallback(() => setZoom(ZOOM_DEFAULT), []);
+  const handleZoomIn = useCallback(() => handleZoom(1), [handleZoom]);
+  const handleZoomOut = useCallback(() => handleZoom(-1), [handleZoom]);
 
   const docDataUrlRef = useRef(docDataUrl);
   docDataUrlRef.current = docDataUrl;
 
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const isPresentingRef = useRef(isPresenting);
+  isPresentingRef.current = isPresenting;
+  const isSingleMonitorRef = useRef(isSingleMonitor);
+  isSingleMonitorRef.current = isSingleMonitor;
+
+  // O zoom é estado local do presente; durante a apresentação em dois monitores
+  // ele precisa chegar à projeção, senão a telona fica presa no ajuste à tela.
   useEffect(() => {
+    if (!isPresenting || isSingleMonitor) return;
+    void emitSafe(EVENT_ZOOM_CHANGE, { zoom });
+  }, [zoom, isPresenting, isSingleMonitor]);
+
+  // Reenvia o zoom quando a projeção avisa que ficou pronta: se o presenter já
+  // estava com zoom diferente de 1 ao começar, a projeção recém-aberta não tem
+  // como saber. O mesmo handshake do slide já é feito na camada de apresentação.
+  useEffect(() => {
+    let disposed = false;
     let unlistenFn: (() => void) | null = null;
-    listen("app-close-requested", () => {
+    listen(EVENT_VIEWSCREEN_READY, () => {
+      if (disposed) return;
+      if (!isPresentingRef.current || isSingleMonitorRef.current) return;
+      void emitSafe(EVENT_ZOOM_CHANGE, { zoom: zoomRef.current });
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenFn = fn;
+      })
+      .catch((e) => {
+        console.error("Falha ao escutar o sinal de prontidão da projeção", e);
+      });
+    return () => {
+      disposed = true;
+      unlistenFn?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenFn: (() => void) | null = null;
+    listen(EVENT_APP_CLOSE_REQUESTED, () => {
       if (docDataUrlRef.current) {
         setClosePending(true);
       } else {
         getCurrentWindow().destroy();
       }
-    }).then((fn) => { unlistenFn = fn; });
-    return () => { unlistenFn?.(); };
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenFn = fn;
+      })
+      .catch((e) => {
+        // Sem listener não há quem atenda o pedido de fechamento, e o `emit` do
+        // `main.tsx` ainda resolve normalmente porque o evento é broadcast. Sem
+        // este `destroy` a janela ficaria presa: encerrar sem confirmação é
+        // melhor do que travar o app.
+        console.error("Falha ao escutar o pedido de fechamento", e);
+        getCurrentWindow().destroy();
+      });
+    return () => {
+      disposed = true;
+      unlistenFn?.();
+    };
   }, []);
 
   const startResize = useCallback((e: React.MouseEvent) => {
@@ -159,17 +192,28 @@ function PresenterShell() {
     setResizing(true);
     const onMove = (ev: MouseEvent) => {
       const width = window.innerWidth - ev.clientX;
-      setPreviewWidth(Math.min(MAX_PREVIEW, Math.max(MIN_PREVIEW, width)));
+      setPreviewWidth(clamp(width, PREVIEW_MIN_WIDTH, PREVIEW_MAX_WIDTH));
     };
-    const onUp = () => {
+    const cleanup = () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
       document.body.style.userSelect = "";
+    };
+    const onUp = () => {
+      previewResizeCleanupRef.current = null;
       setResizing(false);
+      cleanup();
     };
     document.body.style.userSelect = "none";
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
+    previewResizeCleanupRef.current = cleanup;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      previewResizeCleanupRef.current?.();
+    };
   }, []);
 
   const handleAppClose = useCallback(async () => {
@@ -200,6 +244,7 @@ function PresenterShell() {
     zoomIn: handleZoomIn,
     zoomOut: handleZoomOut,
     zoomReset: handleZoomReset,
+    registerZoomReset,
     onEscape: () => {
       if (isPresenting) setConfirmExitOpen(true);
       else if (docDataUrl) setCloseDocPending(true);
@@ -212,7 +257,7 @@ function PresenterShell() {
     resetTimer,
   });
 
-  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * 1000);
+  const { visible: controlsVisible, show: showControls, setVisible: setControlsVisible, clear: clearAutoHide } = useAutoHide(floatingControlsTimeout * MS_PER_SECOND);
 
   useEffect(() => {
     if (alwaysShowFloatingControls) {
@@ -253,7 +298,6 @@ function PresenterShell() {
           className="relative h-full w-full"
           style={{ backgroundColor }}
           onMouseMove={handleMouseMove}
-          onWheel={handleWheelZoom}
         >
           <Document
             file={docDataUrl}
@@ -268,10 +312,10 @@ function PresenterShell() {
               numPages={numPages}
               zoom={zoom}
               className="h-full"
-              pdfCanvasRef={pdfCanvasRef}
               backgroundColor={backgroundColor}
+              onWheelZoom={(d) => handleZoom(-d)}
               overlay={({ scale }) => (
-                <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
+                <AnnotationLayerContainer scale={scale} annotationCanvasRef={annotationCanvasRef} />
               )}
             />
           </Document>
@@ -285,12 +329,12 @@ function PresenterShell() {
         <>
           <Sidebar onClose={() => setShowSidebar(false)} width={sidebarWidth} show={showSidebar} />
 
-          <main className="relative flex flex-1 overflow-hidden" onWheel={handleWheelZoom}>
+          <main className="relative flex flex-1 overflow-hidden">
             {!showSidebar && (
               <button
                 onClick={() => setShowSidebar(true)}
                 aria-label="Mostrar sidebar"
-                title="Mostrar sidebar (B)"
+                title="Mostrar sidebar (Z)"
                 className="absolute left-3 top-3 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm hover:bg-accent cursor-pointer"
               >
                 <PanelLeftOpen className="size-4" />
@@ -313,10 +357,10 @@ function PresenterShell() {
                       numPages={numPages}
                       zoom={zoom}
                       className="h-full"
-                      pdfCanvasRef={pdfCanvasRef}
                       backgroundColor={backgroundColor}
+                      onWheelZoom={(d) => handleZoom(-d)}
                       overlay={({ scale }) => (
-                        <AnnotationLayerContainer scale={scale} annotationCanvasRef={pdfCanvasRef} />
+                        <AnnotationLayerContainer scale={scale} annotationCanvasRef={annotationCanvasRef} />
                       )}
                     />
                   </div>
@@ -344,6 +388,7 @@ function PresenterShell() {
                   show={showPreview}
                   resizing={resizing}
                   onMouseDown={startResize}
+                  onWidthChange={setPreviewWidth}
                   onHide={() => setShowPreview(false)}
                   onOpenSettings={() => setSettingsOpen(true)}
                 />

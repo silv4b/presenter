@@ -21,13 +21,13 @@
 | 15 | Fechamento automático da janela de projeção ao encerrar | ✅ |
 | 16 | Atalhos de teclado para ferramentas (L, P, H, E) | ✅ |
 | 17 | Seletor de cores com presets e personalizado | ✅ |
-| 18 | Desfazer/Refazer anotações (Ctrl+Z / Ctrl+Shift+Z) | ✅ |
+| 18 | Desfazer/Refazer anotações (Ctrl+Z / Ctrl+Y) | ✅ |
 | 19 | Lista de arquivos recentes (histórico) | ✅ |
 | 20 | Abrir local do arquivo no explorador | ✅ |
 | 21 | Configurações reais (cor de fundo, controles flutuantes) | ✅ |
 | 22 | Zoom/Pan nos slides (Ctrl+scroll, Space+arrasto) | ✅ |
 | 23 | Notas do apresentador (PDF annotations) | ✅ |
-| 24 | Exportar anotações embutidas no PDF | ✅ |
+| 24 | Exportar slides anotados como imagens em novo PDF | ✅ |
 | 25 | Atalhos Z/X/C para sidebars e carousel | ✅ |
 | 26 | Drag-and-drop para abrir PDF | ✅ |
 
@@ -35,7 +35,7 @@
 
 ## A. Melhorias de UX
 
-### A1. Configurações reais (dialog placeholder)
+### A1. Configurações reais (dialog placeholder) ✅
 
 **Complexidade:** Média
 
@@ -47,15 +47,17 @@ O dialog de configurações mostra configurações reais: cor de fundo, controle
 - ~~Toggle de tema claro/escuro~~
 - ~~Lista de arquivos recentes~~
 
-### A2. Arrastar e soltar PDF (drag-and-drop) ✅
+### A2. Arrastar e soltar PDF (drag-and-drop) ⚠️ parcial
 
 **Complexidade:** Baixa
 
 Adicionar uma zona de drop na tela de boas-vindas e na área principal
 para abrir PDFs arrastando o arquivo para a janela.
 
-Implementado em `Welcome.tsx` com `onDragOver` e handler de `drop`
-via `getCurrentWebview().onDragDropEvent`.
+Implementado **só na tela de boas-vindas**, em `Welcome.tsx`, com
+`onDragOver` e handler de `drop` via
+`getCurrentWebview().onDragDropEvent`. Falta a área principal (a tela de
+apresentação) aceita drop.
 
 ### A3. Lista de arquivos recentes ✅
 
@@ -82,7 +84,7 @@ Implementado em `WelcomeSidebar.tsx` com `revealItemInDir` do
 **Complexidade:** Média
 
 Implementar uma pilha por página para desfazer e refazer traços.
-Atalhos: Ctrl+Z (desfazer), Ctrl+Shift+Z (refazer).
+Atalhos: Ctrl+Z (desfazer), Ctrl+Y (refazer).
 
 Implementado em `src/state/annotations/presenter.tsx` com
 historyRef (max 50 snapshots) e sincronização com viewscreens.
@@ -91,7 +93,7 @@ historyRef (max 50 snapshots) e sincronização com viewscreens.
 
 **Complexidade:** Baixa
 
-Atualmente caneta = vermelho (#ef4444), marcador = amarelo (#facc15).
+Atualmente caneta = vermelho (#ef4444), marcador = amarelo (#eab308).
 Adicionar um palette de cores predefinidas ou um color picker.
 
 Implementado em `ColorPicker.tsx` com 6 cores predefinidas,
@@ -103,6 +105,10 @@ HexColorPicker para cores customizadas, e input hex.
 
 Exibir "3 / 24" como overlay discreto no canto da janela de projeção
 (opcional, ativável nas configurações).
+
+Ainda não existe na projeção: o contador "3 / 24" que existe hoje está
+nos controles flutuantes da janela principal, que não são renderizados
+na tela de projeção.
 
 ### A8. Atalhos de teclado para ferramentas ✅
 
@@ -149,7 +155,7 @@ Exibido no `PresenterNotes.tsx` na sidebar do preview.
 Adicionar um toggle para tela branca (W), útil para iluminar um sala
 durante perguntas.
 
-### A13. Barra de progresso de slides
+### A13. Barra de progresso de slides ⛔
 
 **Complexidade:** Baixa
 
@@ -163,7 +169,7 @@ de apenas um campo numérico.
 Permitir `presenter.exe myfile.pdf` para abrir um arquivo
 automaticamente ao iniciar.
 
-### A15. Imprimir slide atual
+### A15. Imprimir slide atual ⛔
 
 **Complexidade:** Baixa
 
@@ -215,7 +221,7 @@ Para páginas com muitas anotações, isso pode ficar lento.
 
 **Solução:** Dirty-rect tracking ou redesenhar apenas o traço alterado.
 
-### B5. GC pressure durante desenho ⛔
+### B5. GC pressure durante desenho
 
 **Complexidade:** Média
 
@@ -226,12 +232,16 @@ collection.
 **Solução:** Usar um ref mutável para o traço ativo e commitar no
 estado React apenas no `onStrokeEnd`.
 
-### B6. Memoização dos Page no carrossel
+### B6. Memoização dos Page no carrossel ✅
 
 **Complexidade:** Baixa
 
 Cada `<Page>` no carrossel re-renderiza quando `currentPage` muda.
 Envolver com `React.memo` e estabilizar props.
+
+Implementado: `CarouselItem` é um `memo()` em `SlideCarousel.tsx`, com
+`onLoadDims`/`onSelect`/`goToPage` estáveis. Reduz re-render, mas não
+resolve o custo de render inicial de N canvas (B2).
 
 ### B7. Worker do PDF.js
 
@@ -287,7 +297,7 @@ durante perguntas).
 Mostrar duas ou mais páginas lado a lado (útil para comparação
 ou quando o PDF tem páginas facing).
 
-### C7. Exportar anotações ✅
+### C7. Exportar slides com anotações ✅
 
 **Complexidade:** Alta
 
@@ -328,7 +338,7 @@ configuração atualmente.
 Não existe nenhum arquivo de teste. Adicionar testes para:
 
 - `lib/annotations.ts` (funções de erase, clamp)
-- `state/annotations.ts` (hooks)
+- `state/annotations/presenter.tsx` (hooks)
 - `state/presentation.tsx` (lógica de negócio)
 
 ### D3. Error boundaries
@@ -371,41 +381,65 @@ Analisado: com apenas 12 tipos exportados e padrão de domínio
 colocado, criar pasta `types/` seria over-engineering. Tipos
 permanecem colocados com seus módulos.
 
-### D8. Import paths inconsistentes
+### D8. Import paths inconsistentes ✅
 
 **Complexidade:** Baixa
 
-Alguns componentes importam `cn` de `"cn"` (pacote) enquanto o
-resto importa de `"@/lib/utils"`. Padronizar em um caminho.
+Alguns componentes importavam `cn` de `"cn"` (pacote) enquanto o
+resto importava de `"@/lib/utils"`. Padronizar em um caminho.
+
+Resolvido: hoje só `src/lib/utils.ts` importa `cn` do pacote
+`class-variance-authority`, e **todos** os consumidores usam
+`@/lib/utils`.
 
 ---
 
 ## E. Plataforma e Build
 
-### E1. Build para macOS/Linux
+### E1. Build para macOS/Linux ✅
 
 **Complexidade:** Média
 
-O bundle lista "all" mas o app foi desenvolvido apenas no Windows.
-Testar e ajustar: decorações no macOS, fullscreen, detecção de
-monitores no Wayland vs X11.
+O `bundle.targets` lista `nsis`, `deb`, `appimage`, `dmg`, `app`, mas o app foi
+desenvolvido e testado apenas no Windows. Pontos de atenção no Linux/macOS:
+decorações no macOS, fullscreen, detecção de monitores no Wayland vs X11.
 
-### E2. Ícone do app
+**Checklist pré-release (Linux e macOS):** a release publica direto
+(`releaseDraft: false`, decisão do maintainer), então estes testes rodam
+**antes** de criar a tag `v*`:
+
+1. **Ubuntu 24.04 (.deb)** — instalar via `install.sh`, abrir um PDF, anotar e
+   exportar o PDF anotado.
+2. **Outra distro (AppImage)** — executar o `.AppImage`: abrir PDF, `F5`
+   (fullscreen), `B`/`W` (tela preta/branca) e encerrar com `Esc`.
+3. **Projeção em segundo monitor** — iniciar a apresentação com o projetor em
+   outro display; no Linux, conferir se Wayland/X11 detecta os monitores.
+4. **macOS (.dmg)** — abrir `presenter.app`, conferir decorações e fullscreen
+   (`F5`), projeção e encerramento.
+5. **Alinhamento de versão** — o número exibido no app e o changelog batem com a
+   tag da release.
+
+Sem teste automatizado, esse checklist é o único gate antes da publicação.
+
+### E2. Ícone do app ✅
 
 **Complexidade:** Baixa
 
 Os ícones são placeholders genéricos do Tauri. Criar um ícone
 personalizado para o Presenter.
 
-### E3. Metadados do instalador ✅
+### E3. Metadados do instalador ⚠️ parcial
 
 **Complexidade:** Baixa
 
 Preencher copyright, descrição, publisher no `tauri.conf.json`
 para distribuição profissional.
 
-Implementado em `Cargo.toml` e `package.json` com descrição,
-autor (Bruno Silva), licença (MIT), homepage e repository.
+Parcial: a descrição, o autor (Bruno Silva), a licença (MIT), a homepage
+e o repositório foram preenchidos em `Cargo.toml` e `package.json`, mas
+**não** no `tauri.conf.json`, que hoje só tem `productName`, `version` e
+`identifier`. O `identifier` ainda é o placeholder genérico
+`com.presenter.app`.
 
 ### E4. Code signing
 
@@ -413,39 +447,3 @@ autor (Bruno Silva), licença (MIT), homepage e repository.
 
 Necessário para macOS e Windows SmartScreen. Configurar
 certificados de assinatura.
-
----
-
-## Priorização Sugerida
-
-### Fase 1 — Quick Wins (fáceis, alto impacto)
-
-1. ~~Drag-and-drop para abrir PDF (A2)~~ ✅
-2. ~~Atalhos de teclado para ferramentas (A8)~~ ✅
-3. Tela branca (A12)
-4. Barra de progresso de slides (A13)
-5. Argumento de linha de comando (A14)
-6. Memoização dos Page no carrossel (B6)
-7. Linter + formatter (D1)
-8. Error boundaries (D3)
-
-### Fase 2 — Médio prazo
-
-1. Persistência de anotações (C1)
-2. ~~Lista de arquivos recentes (A3)~~ ✅
-3. ~~Seletor de cores (A6)~~ ✅
-4. Indicador de página na projeção (A7)
-5. ~~Configurações reais (A1)~~ ✅
-6. Virtualização do carrossel (B2)
-7. ~~Undo/redo de anotações (A5)~~ ✅
-8. Testes unitários (D2)
-
-### Fase 3 — Longo prazo
-
-1. Correção de performance base64 (B1)
-2. Transições entre slides (C3)
-3. ~~Notas do apresentador (A11)~~ ✅
-4. ~~Zoom/Pan nos slides (A10)~~ ✅
-5. Controle remoto via celular (C8)
-6. Ferramentas de forma (C4)
-7. ~~Exportar anotações como PDF (C7)~~ ✅

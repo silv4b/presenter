@@ -4,6 +4,7 @@ import { usePresenterAnnotations } from "@/state/annotations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ColorPicker } from "@/components/ColorPicker";
+import { FloatingTimer } from "@/components/FloatingTimer";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,7 +17,7 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import { PEN_SIZE as DEFAULT_PEN, HIGHLIGHTER_SIZE as DEFAULT_HIGHLIGHTER, ERASER_RADIUS as DEFAULT_ERASER } from "@/lib/annotations";
+import { PEN_COLOR, HIGHLIGHTER_COLOR, PEN_SIZE as DEFAULT_PEN, HIGHLIGHTER_SIZE as DEFAULT_HIGHLIGHTER, ERASER_RADIUS as DEFAULT_ERASER } from "@/lib/annotations";
 import type { AnnotationTool } from "@/lib/annotations";
 
 interface FloatingControlsProps {
@@ -32,6 +33,7 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
     toggleTool,
     nextPage,
     prevPage,
+    isSingleMonitor,
   } = usePresentation();
 
   const {
@@ -62,7 +64,9 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
 
   const lastPickedRef = useRef<string | null>(null);
   const [colorResetKey, setColorResetKey] = useState(0);
-  const [colorCustomized, setColorCustomized] = useState(false);
+
+  const colorsAreDefault = penColor === PEN_COLOR && highlighterColor === HIGHLIGHTER_COLOR;
+  const isDefault = penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER && colorsAreDefault;
 
   useEffect(() => {
     if (activeTool !== "pen" && activeTool !== "highlighter") return;
@@ -73,29 +77,40 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
 
   return (
     <>
-      {/* Navigation */}
+      {/* Faixa inferior: navegação e cronômetro são cartões flutuantes separados, centralizados numa linha */}
       <div
         className={cn(
-          "absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm transition-opacity duration-300",
-          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+          "pointer-events-none absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 transition-opacity duration-300",
+          visible ? "opacity-100" : "opacity-0",
         )}
       >
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={prevPage} disabled={currentPage <= 1}>
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="min-w-16 px-1 text-center text-xs font-medium text-white/80 tabular-nums">
-          {currentPage} / {numPages}
-        </span>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={nextPage} disabled={currentPage >= numPages}>
-          <ChevronRight className="size-4" />
-        </Button>
-        <div className="mx-1 h-5 w-px bg-white/20" />
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40 cursor-pointer" onClick={onStopPresentation} title="Encerrar apresentação (Esc)">
-          <Square className="size-3.5" />
-        </Button>
+        {/* Controles de navegação */}
+        <div
+          className={cn(
+            "pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm",
+            !visible && "pointer-events-none",
+          )}
+        >
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={prevPage} disabled={currentPage <= 1} aria-label="Slide anterior">
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="min-w-16 px-1 text-center text-xs font-medium text-white/80 tabular-nums">
+            {currentPage} / {numPages}
+          </span>
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={nextPage} disabled={currentPage >= numPages} aria-label="Próximo slide">
+            <ChevronRight className="size-4" />
+          </Button>
+          <div className="mx-1 h-5 w-px bg-white/20" />
+          <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-red-500/40 cursor-pointer" onClick={onStopPresentation} title="Encerrar apresentação (Esc)" aria-label="Encerrar apresentação">
+            <Square className="size-3.5" />
+          </Button>
+        </div>
+
+        {/* Cronômetro, exibido apenas no modo de um monitor */}
+        {isSingleMonitor && <FloatingTimer />}
       </div>
 
-      {/* Color picker + Annotation tools */}
+      {/* Seletor de cor e ferramentas de anotação */}
       <div
         className={cn(
           "absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 overflow-visible rounded-lg border border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm transition-opacity duration-300",
@@ -108,37 +123,37 @@ export function FloatingControls({ visible, onStopPresentation }: FloatingContro
           <ColorPicker
             key={colorResetKey}
             value={activeTool === "pen" ? penColor : highlighterColor}
-            defaultColor={activeTool === "pen" ? "#ef4444" : "#eab308"}
+            defaultColor={activeTool === "pen" ? PEN_COLOR : HIGHLIGHTER_COLOR}
             onChange={(c) => {
               lastPickedRef.current = c;
               if (activeTool === "pen") setPenColor(c);
               else if (activeTool === "highlighter") setHighlighterColor(c);
             }}
-            onCustomize={() => setColorCustomized(true)}
             variant="dark"
             disabled={activeTool !== "pen" && activeTool !== "highlighter"}
           />
         </div>
         <div className="mx-1 h-5 w-px bg-white/20" />
         {tools.map(([tool, Icon, label]) => (
-          <Button key={tool} size="icon" variant="ghost" className={cn(toolClass(tool), "cursor-pointer")} onClick={() => toggleTool(tool)} title={label}>
+          <Button key={tool} size="icon" variant="ghost" className={cn(toolClass(tool), "cursor-pointer")} onClick={() => toggleTool(tool)} title={label} aria-label={label}>
             <Icon className="size-4" />
           </Button>
         ))}
         <div className="mx-1 h-5 w-px bg-white/20" />
         <Button
           size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer"
-          onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); setColorCustomized(false); }}
-          disabled={penSize === DEFAULT_PEN && highlighterSize === DEFAULT_HIGHLIGHTER && eraserRadius === DEFAULT_ERASER && !colorCustomized}
+          onClick={() => { resetToolSizes(); resetColors(); lastPickedRef.current = null; setColorResetKey((k) => k + 1); }}
+          disabled={isDefault}
           title="Restaurar tamanhos padrão"
+          aria-label="Restaurar tamanhos e cores padrão"
         >
           <RotateCcw className="size-3.5" />
         </Button>
         <div className="mx-1 h-5 w-px bg-white/20" />
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" aria-label="Desfazer anotação">
           <Undo2 className="size-3.5" />
         </Button>
-        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)">
+        <Button size="icon" variant="ghost" className="size-8 text-white hover:bg-white/10 cursor-pointer" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" aria-label="Refazer anotação">
           <Redo2 className="size-3.5" />
         </Button>
       </div>
