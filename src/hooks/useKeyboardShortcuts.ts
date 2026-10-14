@@ -67,9 +67,11 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
 
       switch (e.key) {
         case "ArrowRight": case "PageDown":
-          e.preventDefault(); o.nextPage(); break;
+          if (!isInput) { e.preventDefault(); o.nextPage(); }
+          break;
         case "ArrowLeft": case "PageUp":
-          e.preventDefault(); o.prevPage(); break;
+          if (!isInput) { e.preventDefault(); o.prevPage(); }
+          break;
         case "ArrowDown":
           if (!isInput) { e.preventDefault(); o.zoomOut(); }
           break;
@@ -77,12 +79,14 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           if (!isInput) { e.preventDefault(); o.zoomIn(); }
           break;
         case " ":
-          if (o.zoom <= 1) { e.preventDefault(); o.nextPage(); }
+          if (!isInput && o.zoom <= 1) { e.preventDefault(); o.nextPage(); }
           break;
         case "Home":
-          e.preventDefault(); o.goToPage(1); break;
+          if (!isInput) { e.preventDefault(); o.goToPage(1); }
+          break;
         case "End":
-          e.preventDefault(); o.goToPage(o.numPages); break;
+          if (!isInput) { e.preventDefault(); o.goToPage(o.numPages); }
+          break;
         case "F5":
           e.preventDefault();
           if (o.isPresenting) void o.stopPresentation();
@@ -95,7 +99,7 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           }
           break;
         case "b": case "B":
-          if (o.isPresenting) {
+          if (!isInput && o.isPresenting) {
             o.toggleBlackScreen();
           }
           break;
@@ -105,7 +109,9 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions) {
           }
           break;
         case "z": case "Z":
-          if (!isInput && o.toggleSidebar) {
+          // Ctrl+Z e Ctrl+Shift+Z ja sao tratados acima. Sem esta guarda o
+          // atalho de refazer antigo vazava para cá e alternava a sidebar.
+          if (!isInput && !e.ctrlKey && !e.metaKey && o.toggleSidebar) {
             e.preventDefault(); o.toggleSidebar();
           }
           break;
