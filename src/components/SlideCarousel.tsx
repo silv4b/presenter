@@ -3,6 +3,7 @@ import { Page } from "@/lib/pdf";
 import { cn } from "@/lib/utils";
 import type { AnnotationStroke } from "@/lib/annotations";
 import { drawStrokes } from "@/lib/canvasDrawing";
+import { clamp } from "@/lib/annotations";
 
 interface SlideCarouselProps {
   numPages: number;
@@ -14,8 +15,11 @@ interface SlideCarouselProps {
   onResizeChange?: (resizing: boolean) => void;
 }
 
-const MIN_HEIGHT = 160;
-const MAX_HEIGHT = 300;
+export const CAROUSEL_MIN_HEIGHT = 160;
+export const CAROUSEL_MAX_HEIGHT = 300;
+export const CAROUSEL_DEFAULT_HEIGHT = 180;
+const CAROUSEL_RESIZE_STEP = 16;
+const CAROUSEL_CHROME_HEIGHT = 66;
 
 function drawThumbnailAnnotations(
   canvas: HTMLCanvasElement,
@@ -116,6 +120,7 @@ export function SlideCarousel({
   const listRef = useRef<HTMLDivElement>(null);
   const [resizing, setResizing] = useState(false);
   const [pageDims, setPageDims] = useState<Record<number, { w: number; h: number }>>({});
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const container = listRef.current;
@@ -127,7 +132,7 @@ export function SlideCarousel({
     const target =
       el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
     container.scrollTo({ left: target, behavior: resizing ? "auto" : "smooth" });
-  }, [currentPage, height]);
+  }, [currentPage, height, resizing]);
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const container = listRef.current;
@@ -148,21 +153,42 @@ export function SlideCarousel({
       const startH = height;
       const onMove = (ev: MouseEvent) => {
         const delta = startY - ev.clientY;
-        onHeightChange(Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startH + delta)));
+        onHeightChange(clamp(startH + delta, CAROUSEL_MIN_HEIGHT, CAROUSEL_MAX_HEIGHT));
       };
-      const onUp = () => {
+      const cleanup = () => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
         document.body.style.userSelect = "";
+      };
+      const onUp = () => {
+        resizeCleanupRef.current = null;
         setResizing(false);
         onResizeChange?.(false);
+        cleanup();
       };
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
+      resizeCleanupRef.current = cleanup;
     },
-    [height, onHeightChange],
+    [height, onHeightChange, onResizeChange],
   );
+
+  const handleHeightKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      onHeightChange(clamp(height + CAROUSEL_RESIZE_STEP, CAROUSEL_MIN_HEIGHT, CAROUSEL_MAX_HEIGHT));
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      onHeightChange(clamp(height - CAROUSEL_RESIZE_STEP, CAROUSEL_MIN_HEIGHT, CAROUSEL_MAX_HEIGHT));
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+    };
+  }, []);
 
   const handleLoadDims = useCallback(
     (page: number, w: number, h: number) => {
@@ -176,19 +202,26 @@ export function SlideCarousel({
 
   if (numPages <= 0) return null;
 
-  const thumbHeight = Math.max(1, height - 66);
+  const thumbHeight = Math.max(1, height - CAROUSEL_CHROME_HEIGHT);
 
   return (
     <div className="flex shrink-0 flex-col border-t border-border bg-card">
       <div
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Ajustar altura do carrossel"
+        aria-valuenow={height}
+        aria-valuemin={CAROUSEL_MIN_HEIGHT}
+        aria-valuemax={CAROUSEL_MAX_HEIGHT}
+        tabIndex={0}
         onMouseDown={startResize}
+        onKeyDown={handleHeightKeyDown}
         className={cn(
           "flex h-1.5 cursor-row-resize items-center justify-center transition-colors hover:bg-primary/60 active:bg-primary",
           resizing && "bg-primary/40",
         )}
-        aria-hidden
       >
-        <div className="h-0.5 w-8 rounded-full bg-muted-foreground/40" />
+        <div className="h-0.5 w-8 rounded-full bg-muted-foreground/40" aria-hidden="true" />
       </div>
       <div
         ref={listRef}

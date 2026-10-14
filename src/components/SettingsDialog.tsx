@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { HexInput } from "@/components/HexInput";
 import { cn } from "@/lib/utils";
+import { MIN_CONTROLS_TIMEOUT, MAX_CONTROLS_TIMEOUT, type Theme } from "@/hooks/useSettings";
 
 const PRESET_BG_COLORS = [
   { label: "Preto", value: "#000000" },
+  { label: "Azul Escuro", value: "#141417" },
   { label: "Branco", value: "#ffffff" },
   { label: "Cinza", value: "#737373" },
 ];
@@ -18,8 +21,8 @@ interface SettingsDialogProps {
   onAlwaysShowFloatingControlsChange: (value: boolean) => void;
   floatingControlsTimeout: number;
   onFloatingControlsTimeoutChange: (value: number) => void;
-  theme: "light" | "dark";
-  onThemeChange: (theme: "light" | "dark") => void;
+  theme: Theme;
+  onThemeChange: (theme: Theme) => void;
 }
 
 export function SettingsDialog({
@@ -37,13 +40,8 @@ export function SettingsDialog({
   const isPreset = PRESET_BG_COLORS.some((c) => c.value === backgroundColor);
   const [editing, setEditing] = useState(false);
   const [lastCustom, setLastCustom] = useState<string | null>(null);
-  const [hexInput, setHexInput] = useState(backgroundColor.replace("#", "").toUpperCase());
   const pickerRef = useRef<HTMLDivElement>(null);
   const customBtnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    setHexInput(backgroundColor.replace("#", "").toUpperCase());
-  }, [backgroundColor]);
 
   useEffect(() => {
     if (!editing) return;
@@ -105,6 +103,8 @@ export function SettingsDialog({
                   style={{ backgroundColor: c.value }}
                   onClick={() => handlePresetClick(c.value)}
                   title={c.label}
+                  aria-label={c.label}
+                  aria-pressed={backgroundColor === c.value}
                 />
               ))}
               <button
@@ -117,6 +117,8 @@ export function SettingsDialog({
                 style={{ backgroundColor: isPreset ? (lastCustom ?? "#3f3f46") : backgroundColor }}
                 onClick={handleCustomClick}
                 title="Personalizado"
+                aria-label="Cor personalizada"
+                aria-pressed={!isPreset}
               />
             </div>
             {editing && (
@@ -125,24 +127,13 @@ export function SettingsDialog({
                 className="absolute left-0 top-full z-50 mt-2 rounded-lg border border-border bg-popover p-3 shadow-md"
               >
                 <HexColorPicker color={backgroundColor} onChange={handleColorChange} />
-                <input
-                  type="text"
-                  value={hexInput}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace("#", "");
-                    if (/^[0-9a-fA-F]{0,6}$/.test(raw)) {
-                      setHexInput(raw.toUpperCase());
-                      if (raw.length === 6) {
-                        handleColorChange(`#${raw}`);
-                      }
-                    }
-                  }}
+                <HexInput
+                  color={backgroundColor}
+                  onChange={handleColorChange}
                   onKeyDown={(e) => {
                     if (e.key === "Escape" || e.key === "Enter") setEditing(false);
                   }}
-                  maxLength={6}
-                  className="mt-2 w-full rounded border border-border bg-muted px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder-muted-foreground"
-                  placeholder="000000"
+                  className="border-border bg-muted text-foreground placeholder-muted-foreground"
                 />
               </div>
             )}
@@ -161,6 +152,7 @@ export function SettingsDialog({
               type="button"
               role="switch"
               aria-checked={theme === "dark"}
+              aria-label="Alternar tema"
               onClick={() => onThemeChange(theme === "light" ? "dark" : "light")}
               className={cn(
                 "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
@@ -189,6 +181,7 @@ export function SettingsDialog({
               type="button"
               role="switch"
               aria-checked={alwaysShowFloatingControls}
+              aria-label="Controles flutuantes sempre visíveis"
               onClick={() => onAlwaysShowFloatingControlsChange(!alwaysShowFloatingControls)}
               className={cn(
                 "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
@@ -218,12 +211,13 @@ export function SettingsDialog({
             <div className="flex items-center gap-1.5">
               <input
                 type="number"
-                min={1}
-                max={30}
+                min={MIN_CONTROLS_TIMEOUT}
+                max={MAX_CONTROLS_TIMEOUT}
                 value={floatingControlsTimeout}
+                aria-label="Tempo de exibição dos controles em segundos"
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  if (Number.isFinite(v) && v >= 1 && v <= 30) onFloatingControlsTimeoutChange(v);
+                  if (Number.isFinite(v) && v >= MIN_CONTROLS_TIMEOUT && v <= MAX_CONTROLS_TIMEOUT) onFloatingControlsTimeoutChange(v);
                 }}
                 disabled={alwaysShowFloatingControls}
                 className={cn(

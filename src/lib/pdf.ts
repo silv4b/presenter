@@ -31,18 +31,22 @@ export async function getDocument(): Promise<DocumentInfo | null> {
 
 export async function extractNotesFromPdf(docDataUrl: string): Promise<Record<number, string[]>> {
   const loadingTask = pdfjs.getDocument({ url: docDataUrl });
-  const pdfDoc = await loadingTask.promise;
-  const notes: Record<number, string[]> = {};
+  try {
+    const pdfDoc = await loadingTask.promise;
+    const notes: Record<number, string[]> = {};
 
-  for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const annotations = await page.getAnnotations();
-    const textNotes = annotations.filter(
-      (a) => a.subtype === "Text" && a.contents && a.contents.trim().length > 0,
-    );
-    if (textNotes.length > 0) {
-      notes[i] = textNotes.map((a) => a.contents);
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const annotations = await page.getAnnotations();
+      const textNotes = annotations.filter(
+        (a) => a.subtype === "Text" && a.contents && a.contents.trim().length > 0,
+      );
+      if (textNotes.length > 0) {
+        notes[i] = textNotes.map((a) => a.contents);
+      }
     }
+    return notes;
+  } finally {
+    await loadingTask.destroy();
   }
-  return notes;
 }

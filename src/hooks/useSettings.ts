@@ -1,66 +1,61 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { readBoolean, readEnum, readHexColor, readNumber, writeStorage } from "@/lib/storage";
 
-const BG_COLOR_KEY = "presenter.backgroundColor";
+export const BG_COLOR_KEY = "presenter.backgroundColor";
 const ALWAYS_SHOW_CONTROLS_KEY = "presenter.alwaysShowFloatingControls";
 const CONTROLS_TIMEOUT_KEY = "presenter.floatingControlsTimeout";
-const THEME_KEY = "presenter.theme";
-const DEFAULT_BG_COLOR = "#000000";
-const DEFAULT_CONTROLS_TIMEOUT = 5;
-const DEFAULT_THEME = "light";
+export const THEME_KEY = "presenter.theme";
+
+export const DEFAULT_BG_COLOR = "#000000";
+export const DEFAULT_CONTROLS_TIMEOUT = 5;
+export const DEFAULT_THEME = "light";
+
+// O mesmo intervalo do diálogo de configurações. Sem o teto aqui, um valor
+// corrompido no localStorage manteria os controles flutuantes visíveis para sempre.
+export const MIN_CONTROLS_TIMEOUT = 1;
+export const MAX_CONTROLS_TIMEOUT = 30;
 
 export type Theme = "light" | "dark";
 
-export interface Settings {
-  backgroundColor: string;
-  alwaysShowFloatingControls: boolean;
-  floatingControlsTimeout: number;
-  theme: Theme;
-}
+const THEMES = [DEFAULT_THEME, "dark"] as const;
 
 export function useSettings() {
-  const [backgroundColor, setBackgroundColorState] = useState<string>(() => {
-    const saved = localStorage.getItem(BG_COLOR_KEY);
-    // A cor vai direto para o style do palco, entao um valor invalido
-    // quebraria a tela. So aceita hex de 6 digitos.
-    return saved && /^#[0-9a-f]{6}$/i.test(saved) ? saved : DEFAULT_BG_COLOR;
-  });
-  const bgRef = useRef(backgroundColor);
-  bgRef.current = backgroundColor;
+  // A cor vai direto para o style do palco, então só aceita hex de 6 dígitos.
+  const [backgroundColor, setBackgroundColorState] = useState<string>(() =>
+    readHexColor(BG_COLOR_KEY, DEFAULT_BG_COLOR),
+  );
 
-  const [alwaysShowFloatingControls, setAlwaysShowFloatingControls] = useState<boolean>(() => {
-    const saved = localStorage.getItem(ALWAYS_SHOW_CONTROLS_KEY);
-    return saved === "true";
-  });
+  const [alwaysShowFloatingControls, setAlwaysShowFloatingControls] = useState<boolean>(() =>
+    readBoolean(ALWAYS_SHOW_CONTROLS_KEY, false),
+  );
 
-  const [floatingControlsTimeout, setFloatingControlsTimeoutState] = useState<number>(() => {
-    // `saved > 0` ja descarta o `Number(null)` que devolve 0 quando a chave
-    // ainda nao existe, entao aqui o default vale corretamente.
-    const raw = localStorage.getItem(CONTROLS_TIMEOUT_KEY);
-    const saved = Number(raw);
-    return raw !== null && Number.isFinite(saved) && saved > 0
-      ? saved
-      : DEFAULT_CONTROLS_TIMEOUT;
-  });
+  const [floatingControlsTimeout, setFloatingControlsTimeoutState] = useState<number>(() =>
+    readNumber(
+      CONTROLS_TIMEOUT_KEY,
+      MIN_CONTROLS_TIMEOUT,
+      MAX_CONTROLS_TIMEOUT,
+      DEFAULT_CONTROLS_TIMEOUT,
+    ),
+  );
 
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem(THEME_KEY);
-    return saved === "dark" ? "dark" : DEFAULT_THEME;
-  });
+  const [theme, setThemeState] = useState<Theme>(() =>
+    readEnum(THEME_KEY, THEMES, DEFAULT_THEME),
+  );
 
   useEffect(() => {
-    localStorage.setItem(BG_COLOR_KEY, backgroundColor);
+    writeStorage(BG_COLOR_KEY, backgroundColor);
   }, [backgroundColor]);
 
   useEffect(() => {
-    localStorage.setItem(ALWAYS_SHOW_CONTROLS_KEY, String(alwaysShowFloatingControls));
+    writeStorage(ALWAYS_SHOW_CONTROLS_KEY, String(alwaysShowFloatingControls));
   }, [alwaysShowFloatingControls]);
 
   useEffect(() => {
-    localStorage.setItem(CONTROLS_TIMEOUT_KEY, String(floatingControlsTimeout));
+    writeStorage(CONTROLS_TIMEOUT_KEY, String(floatingControlsTimeout));
   }, [floatingControlsTimeout]);
 
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, theme);
+    writeStorage(THEME_KEY, theme);
     const html = document.documentElement;
     if (theme === "dark") {
       html.classList.add("dark");

@@ -53,6 +53,7 @@ export function WelcomeSidebar() {
               size="icon-sm"
               className="size-6 cursor-pointer"
               title="Limpar histórico"
+              aria-label="Limpar histórico"
               onClick={() => setConfirmClear(true)}
             >
               <Trash2 className="size-3" />
@@ -72,6 +73,7 @@ export function WelcomeSidebar() {
               >
                 <button
                   onClick={() => handleClick(entry)}
+                  aria-label={`Abrir ${entry.name}`}
                   className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
                 >
                   <FileText className="size-4 shrink-0 text-muted-foreground" />
@@ -88,6 +90,7 @@ export function WelcomeSidebar() {
                       variant="ghost"
                       size="icon-sm"
                       className="size-6 shrink-0 cursor-pointer"
+                      aria-label={`Ações para ${entry.name}`}
                     >
                       <MoreVertical className="size-3" />
                     </Button>
